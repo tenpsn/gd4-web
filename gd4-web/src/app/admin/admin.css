@@ -1,0 +1,293 @@
+@import "tailwindcss";
+
+/* ค่าสีและตัวอักษรหลักของหน้าแอดมิน */
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+:root {
+  --bg: #f4f6f9;
+  --surface: #ffffff;
+  --surface2: #f8fafc;
+  --ink: #0f1b2d;
+  --ink2: #4a5568;
+  --ink3: #6b778a;
+  --line: #e2e7ee;
+  --blue: #1a4fa0;
+  --blue-solid: #1a4fa0;
+  --blue-h: #0f3a80;
+  --soft: #e9f0fb;
+  --panel: #0f3a80;
+  --on-panel2: #cddaf1;
+  --red: #c8312a;
+  --red-solid: #c8312a;
+  --red-soft: #fdecea;
+  --green: #1d7a46;
+  --green-solid: #1f8a4c;
+  --green-soft: #e6f4ec;
+  --amber: #8a5a00;
+  --amber-soft: #fdf3dc;
+  --field: #ffffff;
+  --ph1: #eef2f7;
+  --ph2: #e5eaf2;
+  --ph-ink: #5f6e84;
+  --side: #0a1f44;
+  --overlay: rgba(10, 20, 40, 0.5);
+  --shadow: 0 1px 2px rgba(15, 27, 45, 0.04), 0 2px 8px rgba(15, 27, 45, 0.04);
+  --shadow-h: 0 18px 40px -12px rgba(15, 40, 90, 0.22);
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --bg: #0b111b;
+  --surface: #152033;
+  --surface2: #111a2a;
+  --ink: #e8edf5;
+  --ink2: #a7b3c6;
+  --ink3: #8796ad;
+  --line: #243149;
+  --blue: #93b7f2;
+  --blue-solid: #2a5fb8;
+  --blue-h: #3a6fc8;
+  --soft: #1a2a47;
+  --panel: #102a52;
+  --on-panel2: #c3d2ec;
+  --red: #ff7d71;
+  --red-solid: #d43a2f;
+  --red-soft: #3a1a1e;
+  --green: #6fd39a;
+  --green-solid: #23945a;
+  --green-soft: #12301f;
+  --amber: #f1c46b;
+  --amber-soft: #33280f;
+  --field: #0f1724;
+  --ph1: #18233a;
+  --ph2: #141e32;
+  --ph-ink: #8796ad;
+  --side: #070d16;
+  --overlay: rgba(0, 0, 0, 0.6);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-h: 0 20px 44px -12px rgba(0, 0, 0, 0.6);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface2: var(--surface2);
+  --color-ink: var(--ink);
+  --color-ink2: var(--ink2);
+  --color-ink3: var(--ink3);
+  --color-line: var(--line);
+  --color-blue: var(--blue);
+  --color-blue-solid: var(--blue-solid);
+  --color-blue-h: var(--blue-h);
+  --color-soft: var(--soft);
+  --color-panel: var(--panel);
+  --color-on-panel2: var(--on-panel2);
+  --color-red: var(--red);
+  --color-red-solid: var(--red-solid);
+  --color-red-soft: var(--red-soft);
+  --color-green: var(--green);
+  --color-green-solid: var(--green-solid);
+  --color-green-soft: var(--green-soft);
+  --color-amber: var(--amber);
+  --color-amber-soft: var(--amber-soft);
+  --color-field: var(--field);
+  --color-ph1: var(--ph1);
+  --color-ph2: var(--ph2);
+  --color-ph-ink: var(--ph-ink);
+  --color-side: var(--side);
+  --color-side-ink: #c5d0e2;
+  --color-side-ink2: #9fb0c9;
+  --color-brand-red: #e8483d;
+
+  --font-sans: var(--font-plex), var(--font-plex-thai), system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+
+  --shadow-card: var(--shadow);
+  --shadow-lift: var(--shadow-h);
+
+  --breakpoint-md2: 47.5rem; /* จอเล็กกว่า 760 พิกเซล เมนูข้างจะกลายเป็นแผงเลื่อนออกมา */
+  --breakpoint-xl2: 67.5rem; /* จอตั้งแต่ 1080 พิกเซล แสดงชื่อและตำแหน่งที่แถบด้านบน */
+}
+
+@layer base {
+  *,
+  ::before,
+  ::after {
+    box-sizing: border-box;
+  }
+  html,
+  body {
+    height: 100%;
+  }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-plex), var(--font-plex-thai), system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  a {
+    color: var(--blue);
+    text-decoration: none;
+  }
+  a:hover {
+    color: var(--red);
+  }
+  input,
+  select,
+  textarea,
+  button {
+    font: inherit;
+  }
+  ::placeholder {
+    color: var(--ink3);
+  }
+  :focus-visible {
+    outline: 2px solid var(--blue-solid);
+    outline-offset: 2px;
+  }
+}
+
+@utility card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+@utility field {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--field);
+  color: var(--ink);
+  font-size: 15px;
+  outline: none;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+  &:focus {
+    border-color: var(--blue-solid);
+    box-shadow: 0 0 0 3px var(--soft);
+  }
+  &[aria-invalid="true"] {
+    border-color: var(--red);
+  }
+}
+
+@utility shimmer {
+  background: linear-gradient(90deg, var(--ph1) 0, var(--ph2) 50%, var(--ph1) 100%);
+  background-size: 800px 100%;
+  animation: a-shim 1.3s linear infinite;
+}
+
+@utility anim-up {
+  animation: a-up 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+html[data-fade="1"],
+html[data-fade="1"] * {
+  transition:
+    background-color 0.38s ease,
+    color 0.38s ease,
+    border-color 0.38s ease !important;
+}
+
+@keyframes a-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes a-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes a-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.92) translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes a-toast {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes a-shim {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+@keyframes a-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes a-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(31, 138, 76, 0.5);
+  }
+  100% {
+    box-shadow: 0 0 0 8px rgba(31, 138, 76, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ช่องพิมพ์ข้อความที่จัดรูปแบบได้ */
+.rte:empty::before {
+  content: attr(data-ph);
+  color: var(--ink3);
+}
+.rte ul,
+.rte ol {
+  padding-left: 22px;
+  margin: 6px 0;
+}
+.rte p {
+  margin: 0 0 8px;
+}
+.rte a {
+  text-decoration: underline;
+}
+
+@keyframes a-slide {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: none;
+  }
+}

@@ -1,0 +1,40 @@
+# ไลบรารีที่ติดตั้งจาก npm
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# ผลการทดสอบ
+/coverage
+
+# ไฟล์ที่ระบบสร้างตอนรันและตอน build
+/.next/
+/out/
+/build
+
+# ไฟล์ของระบบและไฟล์กุญแจ
+.DS_Store
+*.pem
+
+# ไฟล์บันทึกข้อผิดพลาด
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ไฟล์ตั้งค่าที่มีรหัสผ่าน เก็บเฉพาะไฟล์ตัวอย่าง
+.env*
+!.env.example
+
+# ไฟล์ของ Vercel
+.vercel
+
+# ไฟล์ที่ TypeScript สร้างเอง
+*.tsbuildinfo
+next-env.d.ts
+
+# ข้อมูลจำลองในโฟลเดอร์ .data ถูกเอาเข้า git เป็นเวอร์ชันตัวอย่าง

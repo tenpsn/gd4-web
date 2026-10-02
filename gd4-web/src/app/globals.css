@@ -1,0 +1,350 @@
+@import "tailwindcss";
+
+/* ค่าสีและตัวอักษรหลักของเว็บ ทุกส่วนของหน้าใช้ค่าชุดนี้
+   ต่อไปหน้าแอดมินจะเป็นคนกำหนดค่าเหล่านี้จากฐานข้อมูล */
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+:root {
+  --c-primary: #1a4fa0;
+  --c-primary-solid: #1a4fa0;
+  --c-primary-h: #0f3a80;
+  --c-link: #1a4fa0;
+  --c-accent: #c8312a;
+  --c-accent-solid: #c8312a;
+  --c-bg: #ffffff;
+  --c-bg2: #f4f6f9;
+  --c-card: #ffffff;
+  --c-ink: #0f1b2d;
+  --c-ink2: #4a5568;
+  --c-ink3: #6b778a;
+  --c-line: #e2e7ee;
+  --c-soft: #e9f0fb;
+  --c-panel: #0f3a80;
+  --c-footer: #0a1f44;
+  --c-ph1: #eef2f7;
+  --c-ph2: #e4e9f1;
+  --c-ph-ink: #5f6e84;
+  --c-ok: #1d7a46;
+  --c-ok-soft: #e6f4ec;
+  --c-err: #b42a23;
+  --c-err-soft: #fdecea;
+  --sh: 0 18px 40px -16px rgba(15, 40, 90, 0.25);
+  /* สีหัวข้อบนพื้นสีอ่อน แอดมินเปลี่ยนได้ */
+  --c-heading: var(--c-ink);
+
+  --f-head: var(--font-plex-thai), var(--font-plex), sans-serif;
+  --f-body: var(--font-plex-thai), var(--font-plex), sans-serif;
+  --f-mono: var(--font-plex-mono), ui-monospace, monospace;
+
+  --r: 12px;
+  --r-sm: 8px;
+
+  /* มือถือ จอเล็กกว่า 640 พิกเซล */
+  --sec-py: 52px;
+  --sec-px: 20px;
+  --fs-h1: 30px;
+  --fs-h2: 24px;
+  --fs-h3: 17px;
+  --fs-body: 16px;
+  --fs-small: 13.5px;
+  --fs-btn: 15px;
+  --fs-menu: 16px;
+
+  color-scheme: light;
+}
+
+/* แท็บเล็ต จอ 640 ถึง 1023 พิกเซล */
+@media (min-width: 640px) {
+  :root {
+    --sec-py: 64px;
+    --sec-px: 32px;
+    --fs-h1: 38px;
+    --fs-h2: 28px;
+    --fs-h3: 18px;
+    --fs-small: 14px;
+    --fs-menu: 15px;
+  }
+}
+
+/* คอมพิวเตอร์ จอตั้งแต่ 1024 พิกเซล */
+@media (min-width: 1024px) {
+  :root {
+    --sec-py: 88px;
+    --sec-px: 40px;
+    --fs-h1: 48px;
+    --fs-h2: 34px;
+    --fs-h3: 19px;
+    --fs-body: 17px;
+    --fs-btn: 15.5px;
+  }
+}
+
+[data-theme="dark"] {
+  --c-primary: #93b7f2;
+  --c-primary-solid: #2a5fb8;
+  --c-primary-h: #3a6fc8;
+  --c-link: #93b7f2;
+  --c-accent: #ff8a7f;
+  --c-accent-solid: #d43a2f;
+  --c-bg: #0b111b;
+  --c-bg2: #111a2a;
+  --c-card: #152033;
+  --c-ink: #e8edf5;
+  --c-ink2: #a7b3c6;
+  --c-ink3: #8796ad;
+  --c-line: #243149;
+  --c-soft: #1a2a47;
+  --c-panel: #102a52;
+  --c-footer: #070d16;
+  --c-ph1: #18233a;
+  --c-ph2: #141e32;
+  --c-ph-ink: #8796ad;
+  --c-ok: #6fd39a;
+  --c-ok-soft: #12301f;
+  --c-err: #ff8a7f;
+  --c-err-soft: #3a1a1e;
+  --sh: 0 20px 44px -16px rgba(0, 0, 0, 0.6);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-primary: var(--c-primary);
+  --color-primary-solid: var(--c-primary-solid);
+  --color-primary-h: var(--c-primary-h);
+  --color-link: var(--c-link);
+  --color-accent: var(--c-accent);
+  --color-accent-solid: var(--c-accent-solid);
+  --color-bg: var(--c-bg);
+  --color-bg2: var(--c-bg2);
+  --color-card: var(--c-card);
+  --color-ink: var(--c-ink);
+  --color-ink2: var(--c-ink2);
+  --color-ink3: var(--c-ink3);
+  --color-line: var(--c-line);
+  --color-soft: var(--c-soft);
+  --color-panel: var(--c-panel);
+  --color-footer: var(--c-footer);
+  --color-ph1: var(--c-ph1);
+  --color-ph2: var(--c-ph2);
+  --color-ph-ink: var(--c-ph-ink);
+  --color-ok: var(--c-ok);
+  --color-ok-soft: var(--c-ok-soft);
+  --color-err: var(--c-err);
+  --color-err-soft: var(--c-err-soft);
+  /* ตัวอักษรสีอ่อนบนพื้นสีกรมท่า */
+  --color-on-dark: #cddaf1;
+  --color-footer-ink: #c5d0e2;
+
+  --font-head: var(--f-head);
+  --font-body: var(--f-body);
+  --font-mono: var(--f-mono);
+
+  --text-h1: var(--fs-h1);
+  --text-h2: var(--fs-h2);
+  --text-h3: var(--fs-h3);
+  --text-body: var(--fs-body);
+  --text-small: var(--fs-small);
+  --text-btn: var(--fs-btn);
+  --text-menu: var(--fs-menu);
+
+  --radius-card: var(--r);
+  --radius-ctl: var(--r-sm);
+  --shadow-card: var(--sh);
+
+  --breakpoint-quote: 73.75rem; /* จอตั้งแต่ 1180 พิกเซล แสดงปุ่มขอใบเสนอราคาและเมนู 6 รายการ */
+  --breakpoint-wide: 85rem; /* จอตั้งแต่ 1360 พิกเซล แสดงเมนู 7 รายการ */
+}
+
+@layer base {
+  *,
+  ::before,
+  ::after {
+    box-sizing: border-box;
+  }
+  html {
+    -webkit-font-smoothing: antialiased;
+    scroll-behavior: smooth;
+    scroll-padding-top: 90px;
+  }
+  body {
+    margin: 0;
+    background: var(--c-bg);
+    color: var(--c-ink);
+    font-family: var(--f-body);
+    font-size: var(--fs-body);
+    line-height: 1.7;
+  }
+  a {
+    color: var(--c-link);
+    text-decoration: none;
+  }
+  a:hover {
+    color: var(--c-accent);
+  }
+  input,
+  select,
+  textarea,
+  button {
+    font: inherit;
+  }
+  ::placeholder {
+    color: var(--c-ink3);
+  }
+  :focus-visible {
+    outline: 2px solid var(--c-primary-solid);
+    outline-offset: 2px;
+  }
+}
+
+/* หัวข้อบนพื้นสีอ่อนใช้สีหัวข้อที่ตั้งไว้ */
+@utility heading-ink {
+  & :is(h1, h2, h3) {
+    color: var(--c-heading);
+  }
+}
+
+/* กล่องเนื้อหาของแต่ละส่วน กว้างไม่เกิน 1200 พิกเซล */
+@utility sec {
+  max-width: 1200px;
+  margin-inline: auto;
+  padding: var(--sec-py) var(--sec-px);
+}
+
+/* กล่องลายทางแทนรูป ใช้จนกว่าจะอัปโหลดรูปจริง */
+@utility stripe {
+  background: repeating-linear-gradient(135deg, var(--c-ph1) 0 8px, var(--c-ph2) 8px 16px);
+}
+
+@utility shimmer {
+  background: linear-gradient(90deg, var(--c-ph1) 0, var(--c-ph2) 50%, var(--c-ph1) 100%);
+  background-size: 1000px 100%;
+  animation: s-shim 1.4s linear infinite;
+}
+
+@utility anim-up {
+  animation: s-up 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@utility clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@utility clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@utility clamp-4 {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ค่อยๆ เปลี่ยนสีเวลาสลับโหมดสว่างและมืด */
+html[data-fade="1"],
+html[data-fade="1"] * {
+  transition:
+    background-color 0.35s ease,
+    color 0.35s ease,
+    border-color 0.35s ease !important;
+}
+
+@keyframes s-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes s-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes s-drawer {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes s-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes s-shim {
+  0% {
+    background-position: -500px 0;
+  }
+  100% {
+    background-position: 500px 0;
+  }
+}
+@keyframes s-marq {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+@keyframes s-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes s-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ข้อความรายละเอียดสินค้าที่จัดรูปแบบจากหน้าแอดมิน */
+.rich > * {
+  margin: 0 0 0.6em;
+}
+.rich ul,
+.rich ol {
+  padding-left: 1.4em;
+}
+.rich a {
+  text-decoration: underline;
+}
