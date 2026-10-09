@@ -109,7 +109,7 @@ export function Hero({ s }: { s: HeroSection }) {
             className={`absolute inset-0 transition-opacity duration-700 ${i === active ? "opacity-100" : "opacity-0"}`}
             aria-hidden={i !== active}
           >
-            <Media img={sl.img} alt={tx(sl.imgAlt, lang)} dark priority={i === 0} />
+            <Media img={sl.img} alt={tx(sl.title, lang)} dark priority={i === 0} />
           </div>
         ))}
       </div>

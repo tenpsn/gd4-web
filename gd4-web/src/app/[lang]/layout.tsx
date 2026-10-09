@@ -2,10 +2,12 @@ import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, IBM_Plex_Sans, IBM_Plex_Sans_Thai } from "next/font/google";
 import { notFound } from "next/navigation";
 import { lang as rootLang } from "next/root-params";
+import { BackToTop } from "@/components/layout/BackToTop";
 import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
+import { Reveal } from "@/components/layout/Reveal";
 import { ThemeSync } from "@/components/layout/theme";
-import { THEME_INIT } from "@/components/layout/theme-init";
+import { REVEAL_INIT, THEME_INIT } from "@/components/layout/theme-init";
 import { LangProvider } from "@/i18n/client";
 import { isLocale, LOCALES, tx } from "@/i18n/config";
 import { getDesign, getSettings } from "@/lib/content";
@@ -57,6 +59,7 @@ export default async function RootLayout({ children }: LayoutProps<"/[lang]">) {
       <head>
         {/* ตั้งธีมก่อนหน้าเว็บแสดงผล เพื่อไม่ให้โหมดมืดกะพริบ */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
+        <script dangerouslySetInnerHTML={{ __html: REVEAL_INIT }} />
         {/* ธีมและตัวอักษรจากหลังบ้าน ใส่เฉพาะค่าที่ต่างจากค่าเริ่มต้น */}
         {fonts && <link rel="stylesheet" href={fonts} />}
         {css && <style id="design-tokens" dangerouslySetInnerHTML={{ __html: css }} />}
@@ -67,6 +70,8 @@ export default async function RootLayout({ children }: LayoutProps<"/[lang]">) {
           <Header menu={settings.menu} siteName={tx(settings.siteName, lang)} logo={settings.logo} logoDark={settings.logoDark} />
           <main id="main">{children}</main>
           <Footer settings={settings} lang={lang} />
+          <BackToTop />
+          <Reveal />
         </LangProvider>
       </body>
     </html>

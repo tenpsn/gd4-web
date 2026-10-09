@@ -6,12 +6,13 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import { LocalLink } from "@/components/LocalLink";
-import { Media } from "@/components/Media";
+import { ProductGallery, type GalleryImage } from "@/components/ProductGallery";
 import { btn } from "@/components/sections/shared";
 import { tx } from "@/i18n/config";
 import { getDict } from "@/i18n/dictionary";
 import { getCategories, getProduct, getProducts } from "@/lib/content";
 import { alternates, currentLang } from "@/lib/page";
+import type { Img } from "@/types/site";
 
 export async function generateStaticParams() {
   return (await getProducts()).map((p) => ({ sku: p.sku.toLowerCase() }));
@@ -35,6 +36,10 @@ export default async function ProductPage({ params }: PageProps<"/[lang]/product
   if (!p) notFound();
   const cat = (await getCategories()).find((c) => c.id === p.category);
   const name = tx(p.name, lang);
+  // รูปทั้งหมดของสินค้าที่มีไฟล์แล้ว ถ้าข้อมูลเก่ายังไม่มีรายการรูป ใช้รูปหลักรูปเดียว
+  const alt = (src: Img, label?: string) => (src === "placeholder" ? `${t.p.img} · ${p.sku}` : label || name);
+  const gallery: GalleryImage[] = (p.images ?? []).filter((im) => im.src).map((im) => ({ id: im.id, src: im.src, alt: alt(im.src, tx(im.label, lang)) }));
+  if (!gallery.length && p.img) gallery.push({ id: "main", src: p.img, alt: alt(p.img) });
   const short = tx(p.short, lang);
   const detail = tx(p.detail, lang);
 
@@ -60,16 +65,7 @@ export default async function ProductPage({ params }: PageProps<"/[lang]/product
 
       <section className="bg-bg">
         <div className="sec grid grid-cols-1 items-start gap-[clamp(28px,5vw,56px)] lg:grid-cols-2">
-          <div className="relative aspect-[4/3] overflow-hidden rounded-card border border-line bg-bg2">
-            {p.img ? (
-              <Media img={p.img} alt={p.img === "placeholder" ? `${t.p.img} · ${p.sku}` : name} priority />
-            ) : (
-              <span className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-ink3">
-                <Icon name="noimg" size={28} />
-                <span className="text-sm">{t.p.noImg}</span>
-              </span>
-            )}
-          </div>
+          <ProductGallery images={gallery} start={Math.max(0, gallery.findIndex((g) => g.src === p.img))} noImg={t.p.noImg} />
 
           <div className="flex min-w-0 flex-col gap-4">
             {cat && (

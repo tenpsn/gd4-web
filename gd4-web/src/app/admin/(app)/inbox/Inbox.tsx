@@ -7,7 +7,7 @@ import { AIcon } from "@/admin/AIcon";
 import { useAdmin } from "@/admin/context";
 import { downloadCsv } from "@/admin/csv";
 import { fmtDate, relDate } from "@/admin/i18n";
-import { btn, Confirm, pageTitle, useToast } from "@/admin/ui";
+import { btn, Confirm, PAGE_SIZE, pageTitle, Pager, useToast } from "@/admin/ui";
 import type { Message, MessageStatus } from "@/server/types";
 import { deleteMessages, setMessageStatus } from "../../actions/inbox";
 
@@ -25,6 +25,7 @@ export function Inbox({ messages, initialFilter, canEdit, canDel }: { messages: 
   const toast = useToast();
   const [filter, setFilter] = useState<Filter>(initialFilter);
   const [q, setQ] = useState("");
+  const [page, setPage] = useState(1);
   const [sel, setSel] = useState<number[]>([]);
   const [openId, setOpenId] = useState<number | null>(null);
   const [confirm, setConfirm] = useState<number[] | null>(null);
@@ -40,7 +41,14 @@ export function Inbox({ messages, initialFilter, canEdit, canDel }: { messages: 
     (m) => (filter === "all" || m.status === filter) && (!term || [m.name, m.company, m.msg, m.subject, m.email, m.phone].some((x) => x.toLowerCase().includes(term))),
   );
   const cur = list.find((m) => m.id === openId) ?? null;
-  const allChecked = rows.length > 0 && rows.every((m) => sel.includes(m.id));
+  // แสดงหน้าละ 10 ข้อความ
+  const pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const pg = Math.min(page, pages);
+  const shown = rows.slice((pg - 1) * PAGE_SIZE, pg * PAGE_SIZE);
+  const allChecked = shown.length > 0 && shown.every((m) => sel.includes(m.id));
+  // เลือกข้ามหน้าและข้ามตัวกรองได้ นับข้อความที่เลือกไว้แต่ไม่ได้แสดงในหน้านี้ เพื่อบอกให้รู้ก่อนลบหรือส่งออก
+  const offPage = sel.filter((id) => !shown.some((m) => m.id === id)).length;
+  const offText = lang === "th" ? `ในนี้มี ${offPage} รายการที่เลือกไว้จากหน้าอื่น` : `${offPage} of them selected on other pages`;
 
   const setStatus = (ids: number[], status: MessageStatus, quiet = false) => {
     if (!canEdit) return;
@@ -69,13 +77,18 @@ export function Inbox({ messages, initialFilter, canEdit, canDel }: { messages: 
       router.refresh();
     });
 
+  // ส่งออกเฉพาะข้อความที่ติ๊กเลือกไว้ เรียงตามลำดับในรายการ
   const exportCsv = () => {
+    const picked = list.filter((m) => sel.includes(m.id));
+    if (!picked.length) return;
     const header = [t.inbox.date, t.inbox.colName, t.inbox.company, t.inbox.phone, t.inbox.email, t.inbox.subject, t.form.detail, t.inbox.status];
-    downloadCsv(`gd4-messages-${new Date().toISOString().slice(0, 10)}.csv`, [header, ...rows.map((m) => [m.date, m.name, m.company, m.phone, m.email, m.subject, m.msg, t.inbox[m.status]])]);
+    // ใส่วันที่ตามเวลาประเทศไทยในชื่อไฟล์
+    downloadCsv(`gd4-messages-${new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(new Date())}.csv`, [header, ...picked.map((m) => [m.date, m.name, m.company, m.phone, m.email, m.subject, m.msg, t.inbox[m.status]])]);
     toast("ok", t.toast.exported);
   };
 
   const stLabel = (m: Message) => <span className={`whitespace-nowrap rounded-full px-2.5 py-[3px] text-[12.5px] font-semibold ${ST[m.status]}`}>{t.inbox[m.status]}</span>;
+  const exportHint = lang === "th" ? "ติ๊กเลือกข้อความที่ต้องการส่งออกก่อน" : "Select the messages to export first";
   const tabs: Filter[] = ["all", "new", "read", "replied"];
   const newText = lang === "th" ? `ข้อความใหม่ ${counts.new} รายการ จากทั้งหมด ${counts.all}` : `${counts.new} new of ${counts.all} messages`;
 
@@ -86,9 +99,16 @@ export function Inbox({ messages, initialFilter, canEdit, canDel }: { messages: 
           <h1 className={pageTitle}>{t.inbox.title}</h1>
           <p className="m-0 text-[15px] text-ink2">{newText}</p>
         </div>
-        <button type="button" onClick={exportCsv} disabled={!rows.length} className={`${btn.outline} hover:border-green-solid hover:text-green`}>
+        <button
+          type="button"
+          onClick={exportCsv}
+          disabled={!sel.length}
+          title={sel.length ? undefined : exportHint}
+          className={`${btn.outline} hover:border-green-solid hover:text-green disabled:hover:border-line disabled:hover:text-ink`}
+        >
           <AIcon name="download" />
           {t.inbox.export}
+          {sel.length > 0 && <span className="rounded-full bg-green-soft px-2 py-px text-[12.5px] font-semibold text-green">{sel.length}</span>}
         </button>
       </div>
 
@@ -100,7 +120,7 @@ export function Inbox({ messages, initialFilter, canEdit, canDel }: { messages: 
               type="button"
               role="tab"
               aria-selected={filter === k}
-              onClick={() => (setFilter(k), setSel([]))}
+              onClick={() => (setFilter(k), setPage(1))}
               className={`inline-flex min-h-10 flex-none cursor-pointer items-center gap-2 whitespace-nowrap rounded-[7px] border-0 px-3 text-[14.5px] font-semibold transition-colors ${
                 filter === k ? "bg-blue-solid text-white" : "bg-transparent text-ink2"
               }`}
@@ -115,15 +135,18 @@ export function Inbox({ messages, initialFilter, canEdit, canDel }: { messages: 
           <span className="pointer-events-none absolute left-3 top-1/2 grid -translate-y-1/2 text-ink3">
             <AIcon name="search" />
           </span>
-          <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t.inbox.search} className="field rounded-[10px] pl-10" />
+          <input type="search" value={q} onChange={(e) => (setQ(e.target.value), setPage(1))} placeholder={t.inbox.search} className="field rounded-[10px] pl-10" />
         </label>
       </div>
 
       {sel.length > 0 && (
         <div className="flex flex-wrap items-center gap-2.5 rounded-[10px] border border-blue-solid bg-soft py-2.5 pl-4 pr-3 [animation:a-up_.3s_both]">
-          <strong className="flex-1 text-[14.5px] text-blue">
-            {t.c.selected} {sel.length} {t.c.items}
-          </strong>
+          <span className="flex flex-1 flex-col gap-0.5">
+            <strong className="text-[14.5px] text-blue">
+              {t.c.selected} {sel.length} {t.c.items}
+            </strong>
+            {offPage > 0 && <span className="text-[13px] text-ink2">{offText}</span>}
+          </span>
           {canEdit && (
             <button type="button" onClick={() => (setStatus(sel, "read"), setSel([]))} className="min-h-10 cursor-pointer rounded-lg border-0 bg-transparent px-3.5 text-[14.5px] text-ink hover:bg-surface">
               {t.inbox.read}
@@ -160,13 +183,13 @@ export function Inbox({ messages, initialFilter, canEdit, canDel }: { messages: 
                       <input
                         type="checkbox"
                         checked={allChecked}
-                        onChange={() => setSel(allChecked ? [] : rows.map((m) => m.id))}
+                        onChange={() => setSel((s) => (allChecked ? s.filter((x) => !shown.some((m) => m.id === x)) : [...new Set([...s, ...shown.map((m) => m.id)])]))}
                         aria-label={t.inbox.selAll}
                         className="block size-[18px] cursor-pointer accent-[var(--blue-solid)]"
                       />
                     )}
                   </th>
-                  {[t.inbox.colName, t.inbox.company, t.inbox.phone, t.inbox.subject, t.inbox.date, t.inbox.status].map((h) => (
+                  {[t.inbox.colName, t.inbox.company, t.inbox.phone, t.inbox.colMsg, t.inbox.date, t.inbox.status].map((h) => (
                     <th key={h} className="px-3.5 py-3 text-[13px] font-semibold text-ink2">
                       {h}
                     </th>
@@ -174,7 +197,7 @@ export function Inbox({ messages, initialFilter, canEdit, canDel }: { messages: 
                 </tr>
               </thead>
               <tbody>
-                {rows.map((m, i) => {
+                {shown.map((m, i) => {
                   const unread = m.status === "new";
                   return (
                     <tr
@@ -203,8 +226,8 @@ export function Inbox({ messages, initialFilter, canEdit, canDel }: { messages: 
                       <td className="max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap px-3.5 py-3 text-sm text-ink2">{m.company}</td>
                       <td className="whitespace-nowrap px-3.5 py-3 font-mono text-[13.5px] font-medium text-ink2">{m.phone}</td>
                       <td className="max-w-[300px] px-3.5 py-3">
-                        <span className={`block overflow-hidden text-ellipsis whitespace-nowrap text-[14.5px] ${unread ? "font-bold" : "font-medium"}`}>{m.subject}</span>
-                        <span className="block overflow-hidden text-ellipsis whitespace-nowrap text-[13px] text-ink3">{m.msg}</span>
+                        {/* หัวข้อคือบรรทัดแรกของข้อความ จึงแสดงบรรทัดเดียว ยังไม่อ่านเป็นตัวหนา อ่านแล้วเป็นตัวปกติ */}
+                        <span className={`block overflow-hidden text-ellipsis whitespace-nowrap text-[14.5px] ${unread ? "font-bold text-ink" : "font-normal text-ink2"}`}>{m.subject}</span>
                       </td>
                       <td className="whitespace-nowrap px-3.5 py-3 text-[13.5px] text-ink2">
                         <span className="flex flex-col gap-0.5">
@@ -221,7 +244,7 @@ export function Inbox({ messages, initialFilter, canEdit, canDel }: { messages: 
           </div>
 
           <div className="flex flex-col gap-2.5 md2:hidden">
-            {rows.map((m, i) => {
+            {shown.map((m, i) => {
               const unread = m.status === "new";
               return (
                 <div key={m.id} style={{ animationDelay: `${i * 0.03}s` }} className="relative flex overflow-hidden rounded-xl border border-line bg-surface [animation:a-up_.4s_both]">
@@ -242,7 +265,7 @@ export function Inbox({ messages, initialFilter, canEdit, canDel }: { messages: 
                       <span className={`overflow-hidden text-ellipsis whitespace-nowrap text-[15px] ${unread ? "font-bold" : "font-medium"}`}>{m.name}</span>
                       <span className="flex-none text-[12.5px] text-ink3">{relDate(m.date, lang)}</span>
                     </span>
-                    <span className={`overflow-hidden text-ellipsis whitespace-nowrap text-sm ${unread ? "font-bold" : "font-medium"}`}>{m.subject}</span>
+                    <span className={`overflow-hidden text-ellipsis whitespace-nowrap text-sm ${unread ? "font-bold text-ink" : "font-normal text-ink2"}`}>{m.subject}</span>
                     <span className="overflow-hidden text-ellipsis whitespace-nowrap text-[13px] text-ink2">
                       {m.company} · {m.phone}
                     </span>
@@ -254,6 +277,8 @@ export function Inbox({ messages, initialFilter, canEdit, canDel }: { messages: 
           </div>
         </>
       )}
+
+      <Pager page={pg} total={rows.length} onPage={setPage} />
 
       {cur && (
         <MessagePanel
@@ -271,8 +296,7 @@ export function Inbox({ messages, initialFilter, canEdit, canDel }: { messages: 
         onClose={() => setConfirm(null)}
         onOk={() => confirm && doDelete(confirm)}
         title={t.cf.delMsgTitle}
-        text={t.cf.delMsgText}
-        items={confirm?.map((id) => list.find((m) => m.id === id)?.name ?? String(id))}
+        text={`${lang === "th" ? `จะลบข้อความ ${confirm?.length ?? 0} รายการ` : `${confirm?.length ?? 0} messages will be deleted.`} ${t.cf.delMsgText}`}
         okLabel={t.cf.delOk}
       />
     </div>
@@ -330,7 +354,8 @@ function MessagePanel({ m, canEdit, canDel, onClose, onStatus, onDelete }: {
               <span className="overflow-hidden text-ellipsis text-[14.5px] font-medium">{m.email}</span>
             </a>
             <span className={`${card} col-span-full`}>
-              <span className="text-[12.5px] text-ink3">{t.inbox.date}</span>
+              {/* ลูกค้ายินยอมตอนกดส่ง วันเวลาจึงเป็นค่าเดียวกัน */}
+              <span className="text-[12.5px] text-ink3">{m.consentAt ? `${t.inbox.date} · ${t.inbox.consent}` : t.inbox.date}</span>
               <span className="text-[14.5px] font-medium">{fmtDate(m.date, lang)}</span>
             </span>
           </div>

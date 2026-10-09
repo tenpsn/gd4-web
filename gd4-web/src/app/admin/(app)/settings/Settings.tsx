@@ -5,23 +5,17 @@ import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { AIcon, type AIconName } from "@/admin/AIcon";
 import { useAdmin } from "@/admin/context";
-import { fmtDate, relDate } from "@/admin/i18n";
 import { MediaPicker } from "@/admin/MediaPicker";
-import { btn, Confirm, FieldError, fmtSize, label, pageTitle, Req, uploadFile, useToast } from "@/admin/ui";
-import type { Backup } from "@/server/types";
-import type { Design, Img, LText, Locale, Page, SiteLanguage, SiteSettings } from "@/types/site";
-import { restoreVersion } from "../../actions/content";
-import {
-  backupNow, changePassword, restoreBackup, saveGeneral, saveLanguages, saveSeo, setAutoBackup, type PwErrors,
-} from "../../actions/settings";
+import { btn, FieldError, label, pageTitle, Req, uploadFile, useToast } from "@/admin/ui";
+import type { Design, Img, Locale, Page, SiteLanguage, SiteSettings } from "@/types/site";
+import { changePassword, saveGeneral, saveLanguages, saveSeo, type PwErrors } from "../../actions/settings";
 
-type Tab = "general" | "typo" | "theme" | "seo" | "lang" | "security" | "backup";
+type Tab = "general" | "typo" | "theme" | "seo" | "lang" | "security";
 const TABS: [Tab, AIconName][] = [
-  ["general", "gear"], ["typo", "text"], ["theme", "sun"], ["seo", "search"], ["lang", "globe"], ["security", "lock"], ["backup", "download"],
+  ["general", "gear"], ["typo", "text"], ["theme", "sun"], ["seo", "search"], ["lang", "globe"], ["security", "lock"],
 ];
 
 type PageLite = Pick<Page, "id" | "title" | "slug" | "seo">;
-type VersionLite = { v: number; when: string; userId: number; note: LText };
 
 export function Settings(props: {
   full: boolean;
@@ -30,10 +24,6 @@ export function Settings(props: {
   settings: SiteSettings;
   pages: PageLite[];
   design: Design;
-  backups: Backup[];
-  versions: VersionLite[];
-  users: Record<number, LText>;
-  email: string;
 }) {
   const { t } = useAdmin();
   const tabs = props.full ? TABS : TABS.filter(([k]) => k === "security");
@@ -66,7 +56,6 @@ export function Settings(props: {
         {tab === "seo" && <Seo settings={props.settings} pages={props.pages} />}
         {tab === "lang" && <Languages list={props.settings.languages} />}
         {tab === "security" && <Security />}
-        {tab === "backup" && <Backups backups={props.backups} versions={props.versions} users={props.users} auto={props.settings.autoBackup} />}
       </fieldset>
     </div>
   );
@@ -195,7 +184,6 @@ function General({ settings }: { settings: SiteSettings }) {
                 <span className="h-[70%] w-[80%] bg-contain bg-center bg-no-repeat" style={bg(v.logo)} />
               ) : (
                 <span className="flex items-center gap-2.5 text-[#0f1b2d]">
-                  <span className="grid size-11 place-items-center rounded-lg bg-[#1a4fa0] font-bold text-white">GD4</span>
                   <strong>{v.siteName[lang]}</strong>
                 </span>
               )}
@@ -213,7 +201,6 @@ function General({ settings }: { settings: SiteSettings }) {
                 <span className="h-[70%] w-[80%] bg-contain bg-center bg-no-repeat" style={bg(v.logoDark)} />
               ) : (
                 <span className="flex items-center gap-2.5 text-white">
-                  <span className="grid size-11 place-items-center rounded-lg bg-[#2a5fb8] font-bold text-white">GD4</span>
                   <strong>{v.siteName[lang]}</strong>
                 </span>
               )}
@@ -672,147 +659,6 @@ function Security() {
           {t.set.updatePw}
         </button>
       </section>
-    </div>
-  );
-}
-
-function Backups({ backups, versions, users, auto: autoInit }: { backups: Backup[]; versions: VersionLite[]; users: Record<number, LText>; auto: boolean }) {
-  const { lang, t } = useAdmin();
-  const router = useRouter();
-  const toast = useToast();
-  const [auto, setAuto] = useState(autoInit);
-  const [confirm, setConfirm] = useState<{ kind: "backup"; id: string } | { kind: "file"; text: string } | { kind: "version"; v: number } | null>(null);
-  const [pending, start] = useTransition();
-  const fileRef = useRef<HTMLInputElement>(null);
-
-  const download = (id: string) => {
-    const a = document.createElement("a");
-    a.href = `/api/admin/backup/${id}`;
-    a.click();
-  };
-  const doRestore = () =>
-    start(async () => {
-      if (!confirm) return;
-      const r =
-        confirm.kind === "version" ? await restoreVersion(confirm.v) : await restoreBackup(confirm.kind === "backup" ? { id: confirm.id } : { text: confirm.text });
-      setConfirm(null);
-      if (!r.ok) return toast("err", t.toast.badBackup);
-      toast("ok", confirm.kind === "file" ? t.toast.restoredFile : confirm.kind === "version" ? t.toast.restored : t.toast.bkRestored);
-      router.refresh();
-    });
-
-  return (
-    <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,380px),1fr))] items-start gap-4 [animation:a-up_.4s_both]">
-      <section className="card overflow-hidden">
-        <div className="flex flex-col gap-3 border-b border-line px-5 py-[18px]">
-          <span className="flex flex-col gap-[3px]">
-            <strong className="text-base">{t.set.bTitle}</strong>
-            <span className="text-[13.5px] text-ink2">{t.set.bSub}</span>
-          </span>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() =>
-                start(async () => {
-                  const r = await backupNow();
-                  toast("ok", t.toast.bkDone);
-                  download(r.id);
-                  router.refresh();
-                })
-              }
-              className={`${btn.primary} text-[14.5px]`}
-            >
-              <AIcon name="download" />
-              {t.set.bNow}
-            </button>
-            <button type="button" onClick={() => fileRef.current?.click()} className={`${btn.outline} text-[14.5px]`}>
-              <AIcon name="upload" />
-              {t.set.bRestore}
-            </button>
-            <input
-              ref={fileRef}
-              type="file"
-              accept=".json,application/json"
-              hidden
-              onChange={async (e) => {
-                const f = e.target.files?.[0];
-                e.target.value = "";
-                if (!f) return;
-                if (f.size > 30 * 1024 * 1024) return toast("err", t.toast.badBackup);
-                setConfirm({ kind: "file", text: await f.text() });
-              }}
-            />
-          </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={auto}
-            onClick={() => {
-              setAuto(!auto);
-              start(async () => {
-                await setAutoBackup(!auto);
-                toast("ok", t.toast.setSaved);
-              });
-            }}
-            className="flex cursor-pointer items-center gap-3.5 rounded-[10px] border border-line bg-surface2 px-3.5 py-3 text-left text-ink"
-          >
-            <span className="flex flex-1 flex-col gap-0.5">
-              <strong className="text-[14.5px] font-semibold">{t.set.bAutoTitle}</strong>
-              <span className="text-[13px] text-ink2">{t.set.bAutoDesc}</span>
-            </span>
-            <span className={`relative h-6 w-11 flex-none rounded-xl transition-colors ${auto ? "bg-blue-solid" : "bg-line"}`}>
-              <span className="absolute left-0.5 top-0.5 size-5 rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,.25)] transition-transform" style={{ transform: `translateX(${auto ? 20 : 0}px)` }} />
-            </span>
-          </button>
-        </div>
-        <div className="px-5 pb-1 pt-2.5 text-[13px] font-semibold text-ink2">{t.set.bList}</div>
-        {backups.length === 0 && <div className="border-t border-line px-5 py-6 text-center text-sm text-ink3">{lang === "th" ? "ยังไม่มีไฟล์สำรอง" : "No backups yet"}</div>}
-        {backups.map((b, i) => (
-          <div key={b.id} style={{ animationDelay: `${i * 0.04}s` }} className="flex flex-wrap items-center gap-2.5 border-t border-line px-5 py-3 [animation:a-up_.35s_both]">
-            <span className="flex flex-[1_1_180px] flex-col gap-0.5">
-              <strong className="text-[14.5px] font-semibold">{fmtDate(b.when, lang)}</strong>
-              <span className="text-[13px] text-ink2">
-                {relDate(b.when, lang)} · {fmtSize(b.size)}
-              </span>
-            </span>
-            <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${b.auto ? "bg-soft text-blue" : "bg-surface2 text-ink2"}`}>{b.auto ? t.set.bAuto : t.set.bManual}</span>
-            <button type="button" onClick={() => download(b.id)} aria-label={t.set.bDownload} title={t.set.bDownload} className={btn.icon}>
-              <AIcon name="download" />
-            </button>
-            <button type="button" onClick={() => setConfirm({ kind: "backup", id: b.id })} className={`${btn.outline} min-h-[38px] px-3 text-[13.5px]`}>
-              <AIcon name="undo" />
-              {t.content.restore}
-            </button>
-          </div>
-        ))}
-      </section>
-      <section className="card overflow-hidden">
-        <div className="flex flex-col gap-[3px] border-b border-line px-5 py-[18px]">
-          <strong className="text-base">{t.content.vTitle}</strong>
-          <span className="text-[13.5px] leading-normal text-ink2">{t.content.vSub}</span>
-        </div>
-        {versions.map((v, i) => (
-          <div key={v.v} className="flex flex-wrap items-center gap-3 border-t border-line px-5 py-3 first:border-t-0">
-            <span className="w-10 font-mono text-[13px] font-semibold text-blue">v{v.v}</span>
-            <span className="flex min-w-0 flex-[1_1_160px] flex-col gap-0.5">
-              <strong className="text-[14.5px] font-semibold">{v.note[lang]}</strong>
-              <span className="text-[13px] text-ink2">
-                {users[v.userId]?.[lang] ?? "—"} · {relDate(v.when, lang)}
-              </span>
-            </span>
-            {i === 0 ? (
-              <span className="rounded-full bg-green-soft px-2.5 py-[3px] text-[12.5px] font-semibold text-green">{t.content.current}</span>
-            ) : (
-              <button type="button" onClick={() => setConfirm({ kind: "version", v: v.v })} className={`${btn.outline} min-h-[38px] px-3 text-[13.5px]`}>
-                <AIcon name="undo" />
-                {t.content.restore}
-              </button>
-            )}
-          </div>
-        ))}
-      </section>
-      <Confirm open={!!confirm} onClose={() => setConfirm(null)} onOk={doRestore} title={t.cf.restoreTitle} text={t.cf.restoreText} okLabel={t.cf.restoreOk} danger={false} icon="undo" />
     </div>
   );
 }

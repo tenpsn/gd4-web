@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "Theme & type" };
 
 export default async function DesignPage() {
   const user = await requireUser("design");
-  const db = readDb();
+  const db = await readDb();
   return (
     <Editor
       mode="design"

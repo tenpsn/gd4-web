@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AIcon, type AIconName } from "@/admin/AIcon";
-import { avatarColor } from "@/admin/avatar";
+import { ActivityList } from "@/admin/ActivityList";
 import { getAdminDict, relDate, todayLine } from "@/admin/i18n";
 import { getAdminLang } from "@/admin/server";
 import { can, requireUser } from "@/server/auth";
@@ -18,14 +18,16 @@ export default async function Dashboard({ searchParams }: PageProps<"/admin">) {
   const user = await requireUser("dashboard");
   const lang = await getAdminLang();
   const t = getAdminDict(lang);
-  const db = readDb();
+  const db = await readDb();
   const denied = (await searchParams).denied === "1";
 
   const userBy = (id: number) => db.users.find((u) => u.id === id);
   const products = db.products;
   const pub = products.filter((p) => p.status === "pub").length;
   const msgs = [...db.messages].sort((a, b) => b.date.localeCompare(a.date));
+  // นับข้อความที่ยังไม่ได้ตอบ ทั้งที่ยังไม่อ่านและที่อ่านแล้วแต่ยังไม่ตอบ
   const newCount = msgs.filter((m) => m.status === "new").length;
+  const readCount = msgs.filter((m) => m.status === "read").length;
   const lastPage = db.pages.find((p) => p.id === db.lastEdit.page) ?? db.pages[0];
   const lastBy = userBy(db.lastEdit.userId);
 
@@ -35,16 +37,14 @@ export default async function Dashboard({ searchParams }: PageProps<"/admin">) {
       icon: "box", tone: "bg-soft text-blue", href: "/admin/products", show: can(user, "products"),
     },
     {
-      label: t.dash.cMsgs, value: String(newCount), sub: msgs[0] ? `${t.dash.latest} ${relDate(msgs[0].date, lang)}` : "—",
-      icon: "inbox", tone: "bg-red-soft text-red", href: "/admin/inbox?filter=new", show: can(user, "inbox"),
+      label: t.dash.cMsgs, value: String(newCount + readCount), sub: `${t.dash.unread} ${newCount} · ${t.dash.readNoReply} ${readCount}`,
+      icon: "inbox", tone: "bg-red-soft text-red", href: `/admin/inbox?filter=${newCount || !readCount ? "new" : "read"}`, show: can(user, "inbox"),
     },
     {
       label: t.dash.cPage, value: lastPage.title[lang], sub: `${lastBy?.name[lang] ?? "—"} · ${relDate(db.lastEdit.when, lang)}`,
       icon: "page", tone: "bg-green-soft text-green", href: `/admin/content?page=${lastPage.id}`, small: true, show: can(user, "content"),
     },
   ];
-
-  const activity = db.activity.slice(0, 7);
 
   return (
     <div className="flex flex-col gap-[22px]">
@@ -101,41 +101,19 @@ export default async function Dashboard({ searchParams }: PageProps<"/admin">) {
           ))}
       </div>
 
+      {can(user, "activity") && (
       <section className="card anim-up overflow-hidden [animation-delay:.15s]">
         <div className="flex items-center justify-between gap-3 px-[22px] py-[18px]">
           <h2 className="m-0 text-[17px] font-semibold">{t.dash.activity}</h2>
         </div>
-        {activity.length ? (
-          <ol className="m-0 list-none p-0">
-            {activity.map((a, i) => {
-              const u = userBy(a.userId);
-              return (
-                <li
-                  key={a.id}
-                  style={{ animationDelay: `${i * 0.05}s` }}
-                  className="flex items-start gap-3.5 border-t border-line px-[22px] py-3.5 [animation:a-up_.45s_cubic-bezier(.2,.7,.2,1)_both]"
-                >
-                  <span
-                    className="grid size-9 flex-none place-items-center rounded-full text-[12.5px] font-bold text-white"
-                    style={{ background: u ? avatarColor(u.id) : "#6b778a" }}
-                  >
-                    {u?.ini[lang] ?? "?"}
-                  </span>
-                  <span className="flex min-w-0 flex-1 flex-col gap-[3px]">
-                    <span className="text-[15px] leading-[1.55]">
-                      <strong className="font-semibold">{u?.name[lang] ?? "—"}</strong> {a.action[lang]}{" "}
-                      <span className="font-medium text-blue">{a.target[lang]}</span>
-                    </span>
-                    <time className="text-[13px] text-ink3">{relDate(a.when, lang)}</time>
-                  </span>
-                </li>
-              );
-            })}
-          </ol>
-        ) : (
-          <div className="border-t border-line px-[22px] py-10 text-center text-[15px] text-ink2">{t.dash.noAct}</div>
-        )}
+        <ActivityList
+          activity={db.activity.slice(0, 50)}
+          users={db.users.map(({ id, name, ini }) => ({ id, name, ini }))}
+          empty={t.dash.noAct}
+          rowClass="px-[22px]"
+        />
       </section>
+      )}
     </div>
   );
 }

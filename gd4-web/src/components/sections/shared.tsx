@@ -16,7 +16,7 @@ export function SectionShell({ bg = "white", anchor, label, previewId, children 
   children: React.ReactNode;
 }) {
   return (
-    <section id={anchor} aria-label={label} data-sec-id={previewId} className={`relative overflow-hidden ${BG[bg]}`}>
+    <section id={anchor} aria-label={label} data-sec="" data-sec-id={previewId} className={`relative overflow-hidden ${BG[bg]}`}>
       {children}
     </section>
   );
@@ -34,11 +34,11 @@ export const delay = (i: number) => ({ animationDelay: `${(Math.min(i, 8) * 0.06
 
 export const btn = {
   accent:
-    "inline-flex items-center gap-2.5 whitespace-nowrap rounded-ctl bg-accent-solid px-[22px] py-3.5 text-btn font-semibold text-white hover:text-white hover:brightness-110",
+    "inline-flex items-center gap-2.5 whitespace-nowrap rounded-btn bg-accent-solid px-[22px] py-3.5 text-btn font-semibold text-white hover:text-white hover:brightness-110",
   primary:
-    "inline-flex w-fit items-center gap-2 whitespace-nowrap rounded-ctl bg-primary-solid px-5 py-3 text-btn font-semibold text-white hover:bg-primary-h hover:text-white",
+    "inline-flex w-fit items-center gap-2 whitespace-nowrap rounded-btn bg-primary-solid px-5 py-3 text-btn font-semibold text-white hover:bg-primary-h hover:text-white",
   outlineLight:
-    "inline-flex items-center whitespace-nowrap rounded-ctl border-[1.5px] border-white/50 px-[22px] py-[13px] text-btn font-semibold text-white hover:bg-white/10 hover:text-white",
+    "inline-flex items-center whitespace-nowrap rounded-btn border-[1.5px] border-white/50 px-[22px] py-[13px] text-btn font-semibold text-white hover:bg-white/10 hover:text-white",
   outline:
-    "inline-flex items-center whitespace-nowrap rounded-ctl border-[1.5px] border-line px-5 py-3 font-semibold text-ink hover:text-primary",
+    "inline-flex items-center whitespace-nowrap rounded-btn border-[1.5px] border-line px-5 py-3 font-semibold text-ink hover:text-primary",
 };

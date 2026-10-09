@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "Website content" };
 export default async function ContentPage({ searchParams }: PageProps<"/admin/content">) {
   const user = await requireUser("content");
   const sp = await searchParams;
-  const db = readDb();
+  const db = await readDb();
   return (
     <Editor
       mode="content"

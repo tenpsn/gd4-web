@@ -1,5 +1,5 @@
-/** ข้อมูลตั้งต้นของฐานข้อมูลจำลอง ลบไฟล์ mock-db.json เพื่อเริ่มใหม่จากข้อมูลนี้
- * ผู้ใช้ตัวอย่างเข้าระบบด้วยรหัส SEED_ADMIN_PASSWORD หรือรหัสเริ่มต้นด้านล่าง ใช้ตอนพัฒนาเท่านั้น */
+/** ข้อมูลตั้งต้นที่ใช้ตอนฐานข้อมูลยังว่างและไม่มีไฟล์ mock-db.json ในโฟลเดอร์ .data
+ * ผู้ใช้ตัวอย่างเข้าระบบด้วยรหัสผ่านด้านล่าง ใช้ตอนพัฒนาเท่านั้น และเก็บลงฐานข้อมูลแบบเข้ารหัสแล้ว */
 import { DEFAULT_DESIGN } from "@/content/design";
 import { CATEGORIES, PRODUCTS } from "@/content/products";
 import { PAGES, SETTINGS } from "@/content/site";
@@ -7,7 +7,7 @@ import type { LText } from "@/types/site";
 import { hashPassword } from "./password";
 import { AREAS, type Action, type Area, type DB, type Perms, type Role } from "./types";
 
-const DEV_PASSWORD = process.env.SEED_ADMIN_PASSWORD || "gd4-demo-2026";
+const DEV_PASSWORD = "gd4-demo-2026";
 
 const L = (th: string, en: string): LText => ({ th, en });
 const P = (view: number, edit: number, del: number, publish: number): Record<Action, boolean> => ({
@@ -20,9 +20,9 @@ const all = (p: Record<Action, boolean>) => Object.fromEntries(AREAS.map((a) => 
 
 export const DEFAULT_PERMS: Perms = {
   super: all(P(1, 1, 1, 1)),
-  editor: { dashboard: P(1, 0, 0, 0), products: P(1, 1, 0, 0), content: P(1, 1, 1, 1), design: P(1, 1, 0, 0), inbox: P(1, 1, 1, 0), users: P(0, 0, 0, 0), settings: P(0, 0, 0, 0) },
-  products: { dashboard: P(1, 0, 0, 0), products: P(1, 1, 1, 1), content: P(1, 0, 0, 0), design: P(0, 0, 0, 0), inbox: P(1, 1, 0, 0), users: P(0, 0, 0, 0), settings: P(0, 0, 0, 0) },
-  viewer: { dashboard: P(1, 0, 0, 0), products: P(1, 0, 0, 0), content: P(1, 0, 0, 0), design: P(1, 0, 0, 0), inbox: P(1, 0, 0, 0), users: P(0, 0, 0, 0), settings: P(0, 0, 0, 0) },
+  editor: { dashboard: P(1, 0, 0, 0), products: P(1, 1, 0, 0), content: P(1, 1, 1, 1), design: P(1, 1, 0, 0), inbox: P(1, 1, 1, 0), users: P(0, 0, 0, 0), activity: P(1, 0, 0, 0), settings: P(0, 0, 0, 0) },
+  products: { dashboard: P(1, 0, 0, 0), products: P(1, 1, 1, 1), content: P(1, 0, 0, 0), design: P(0, 0, 0, 0), inbox: P(1, 1, 0, 0), users: P(0, 0, 0, 0), activity: P(1, 0, 0, 0), settings: P(0, 0, 0, 0) },
+  viewer: { dashboard: P(1, 0, 0, 0), products: P(1, 0, 0, 0), content: P(1, 0, 0, 0), design: P(1, 0, 0, 0), inbox: P(1, 0, 0, 0), users: P(0, 0, 0, 0), activity: P(1, 0, 0, 0), settings: P(0, 0, 0, 0) },
 };
 
 /** เวลาที่แก้ล่าสุดและผู้แก้ของสินค้าแต่ละรหัส */
@@ -33,7 +33,6 @@ const UPDATED: Record<string, [string, number]> = {
   "HB-5F": ["2026-09-10 16:20", 2], "TN-2": ["2026-09-05 13:00", 1],
 };
 
-const globalOf = (s: typeof SETTINGS) => structuredClone({ menu: s.menu, socials: s.socials, footer: s.footer, contact: s.contact });
 
 export function createSeed(): DB {
   const hash = hashPassword(DEV_PASSWORD);
@@ -78,15 +77,8 @@ export function createSeed(): DB {
     ].sort((x, y) => y.when.localeCompare(x.when)),
     lastEdit: { page: "home", userId: 2, when: "2026-10-02 08:15" },
     design: structuredClone(DEFAULT_DESIGN),
-    versions: [
-      { v: 13, when: "2026-09-28 11:00", userId: 1, note: L("อัปเดตข้อมูลติดต่อ", "Updated contact details"), pages: structuredClone(PAGES), design: structuredClone(DEFAULT_DESIGN), global: globalOf(SETTINGS) },
-      { v: 12, when: "2026-09-21 16:40", userId: 2, note: L("เพิ่มโลโก้พันธมิตร", "Added partner logos"), pages: structuredClone(PAGES), design: structuredClone(DEFAULT_DESIGN), global: globalOf(SETTINGS) },
-      { v: 11, when: "2026-09-14 10:05", userId: 1, note: L("ปรับตัวเลขความสำเร็จ", "Updated key figures"), pages: structuredClone(PAGES), design: structuredClone(DEFAULT_DESIGN), global: globalOf(SETTINGS) },
-    ],
     draft: null,
     draftRev: 0,
-    // เก็บเฉพาะไฟล์สำรองข้อมูลจริงที่สร้างจากหน้าตั้งค่า
-    backups: [],
     media: [],
   };
 }

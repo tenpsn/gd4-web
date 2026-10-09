@@ -122,18 +122,24 @@ export function Modal({ open, onClose, width = 480, title, sub, children, footer
 }) {
   const { t } = useAdmin();
   const ref = useRef<HTMLDivElement>(null);
+  // เก็บฟังก์ชันปิดล่าสุดไว้ เพื่อไม่ให้ส่วนด้านล่างทำงานซ้ำทุกครั้งที่หน้าจอวาดใหม่
+  const closeRef = useRef(onClose);
+  useEffect(() => {
+    closeRef.current = onClose;
+  });
   useEffect(() => {
     if (!open) return;
     const prev = document.activeElement as HTMLElement | null;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && closeRef.current();
     document.addEventListener("keydown", onKey);
-    // เลื่อนเคอร์เซอร์ไปที่ช่องหรือปุ่มแรกในหน้าต่าง
-    window.setTimeout(() => ref.current?.querySelector<HTMLElement>("input,textarea,select,button:not([data-close])")?.focus(), 30);
+    // เลื่อนเคอร์เซอร์ไปที่ช่องหรือปุ่มแรกในหน้าต่าง ทำครั้งเดียวตอนเปิด
+    const timer = window.setTimeout(() => ref.current?.querySelector<HTMLElement>("input,textarea,select,button:not([data-close])")?.focus(), 30);
     return () => {
+      window.clearTimeout(timer);
       document.removeEventListener("keydown", onKey);
       prev?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open]);
   if (!open) return null;
   const titleId = labelledBy ?? "modal-title";
   return createPortal(
@@ -344,3 +350,61 @@ export async function uploadFile(file: File, kind: "image" | "pdf" | "font"): Pr
 }
 
 export const fmtSize = (b: number) => (b > 1048576 ? `${(b / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`);
+
+/** จำนวนแถวต่อหน้าของรายการที่แบ่งหน้าในหลังบ้าน */
+export const PAGE_SIZE = 10;
+
+/**
+ * ปุ่มเปลี่ยนหน้าที่ใช้ร่วมกันทุกรายการ มีหน้าแรก ก่อนหน้า เลขหน้า ถัดไป และหน้าสุดท้าย
+ * page เริ่มที่ 1 ถ้ามีหน้าเดียวจะไม่แสดง
+ */
+export function Pager({ page, total, onPage, per = PAGE_SIZE }: { page: number; total: number; onPage: (p: number) => void; per?: number }) {
+  const { t } = useAdmin();
+  const pages = Math.max(1, Math.ceil(total / per));
+  if (pages <= 1) return null;
+  const cur = Math.min(Math.max(page, 1), pages);
+  // แสดงเลขหน้า 3 หน้า เริ่มจากหน้าปัจจุบัน ถ้าใกล้หน้าสุดท้ายจะแสดง 3 หน้าสุดท้าย
+  const from = Math.max(1, Math.min(cur, pages - 2));
+  const nums = Array.from({ length: Math.min(3, pages) }, (_, i) => from + i);
+  const edge =
+    "inline-flex h-9 min-w-9 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-line bg-surface px-1.5 sm:h-[42px] sm:min-w-[42px] sm:px-2.5 text-[14px] font-semibold text-ink transition-colors hover:border-blue-solid hover:text-blue disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-line disabled:hover:text-ink";
+  const go = (p: number) => onPage(Math.min(Math.max(p, 1), pages));
+  return (
+    <nav aria-label={t.pg.label} className="flex flex-wrap items-center justify-between gap-3">
+      <span className="text-sm text-ink2">
+        {t.pg.showing.replace("{from}", String((cur - 1) * per + 1)).replace("{to}", String(Math.min(cur * per, total))).replace("{total}", String(total))}
+      </span>
+      <div className="flex flex-wrap gap-1 sm:gap-1.5">
+        <button type="button" onClick={() => go(1)} disabled={cur === 1} aria-label={t.pg.first} title={t.pg.first} className={edge}>
+          <AIcon name="chevsL" />
+          <span className="hidden sm:inline">{t.pg.first}</span>
+        </button>
+        <button type="button" onClick={() => go(cur - 1)} disabled={cur === 1} aria-label={t.pg.prev} title={t.pg.prev} className={edge}>
+          <AIcon name="chevL" />
+          <span className="hidden sm:inline">{t.pg.prev}</span>
+        </button>
+        {nums.map((n) => (
+          <button
+            key={n}
+            type="button"
+            onClick={() => go(n)}
+            aria-current={n === cur ? "page" : undefined}
+            className={`h-9 min-w-9 cursor-pointer rounded-lg border text-[14px] font-semibold transition-colors sm:h-[42px] sm:min-w-[42px] sm:text-[14.5px] ${
+              n === cur ? "border-blue-solid bg-blue-solid text-white" : "border-line bg-surface text-ink hover:border-blue-solid hover:text-blue"
+            }`}
+          >
+            {n}
+          </button>
+        ))}
+        <button type="button" onClick={() => go(cur + 1)} disabled={cur === pages} aria-label={t.pg.next} title={t.pg.next} className={edge}>
+          <span className="hidden sm:inline">{t.pg.next}</span>
+          <AIcon name="chevR" />
+        </button>
+        <button type="button" onClick={() => go(pages)} disabled={cur === pages} aria-label={t.pg.last} title={t.pg.last} className={edge}>
+          <span className="hidden sm:inline">{t.pg.last}</span>
+          <AIcon name="chevsR" />
+        </button>
+      </div>
+    </nav>
+  );
+}

@@ -1,28 +1,26 @@
 import { LocalLink } from "@/components/LocalLink";
-import { Logo } from "@/components/Logo";
 import { tx } from "@/i18n/config";
 import { getDict } from "@/i18n/dictionary";
-import type { Locale, SiteSettings, SocialPlatform } from "@/types/site";
-
-const PLATFORMS: Record<SocialPlatform, [name: string, abbr: string, color: string]> = {
-  facebook: ["Facebook", "f", "#1877f2"],
-  line: ["LINE", "L", "#06c755"],
-  youtube: ["YouTube", "▶", "#e62117"],
-  instagram: ["Instagram", "IG", "#d6249f"],
-  linkedin: ["LinkedIn", "in", "#0a66c2"],
-  tiktok: ["TikTok", "TT", "#161823"],
-  x: ["X", "X", "#161823"],
-};
+import { SocialGlyph, socialBg, socialName } from "@/components/SocialIcon";
+import type { Locale, SiteSettings } from "@/types/site";
 
 export function Footer({ settings, lang }: { settings: SiteSettings; lang: Locale }) {
   const t = getDict(lang);
   const { contact } = settings;
+  const dark = settings.logoDark && settings.logoDark !== "placeholder" ? settings.logoDark : null;
+  const footLogo = dark ?? (settings.logo && settings.logo !== "placeholder" ? settings.logo : null);
   return (
     <footer className="bg-footer text-small text-footer-ink">
       <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-8 px-[var(--sec-px)] pb-7 pt-[calc(var(--sec-py)*.7)] sm:grid-cols-2 lg:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(0,1fr))]">
         <div className="flex max-w-[360px] flex-col gap-3.5">
           <span className="flex items-center gap-2.5">
-            <Logo size={42} />
+            {/* พื้นส่วนท้ายเป็นสีเข้ม ใช้โลโก้สำหรับพื้นเข้มก่อน ถ้ามีแค่โลโก้ปกติจะวางบนพื้นขาว ถ้ายังไม่มีโลโก้แสดงแค่ชื่อ */}
+            {footLogo && (
+              <span className={`flex h-[42px] flex-none items-center rounded-ctl ${dark ? "" : "bg-white px-1.5"}`}>
+                {/* eslint-disable-next-line @next/next/no-img-element -- โลโก้ต้องคงสัดส่วนเดิมของรูป */}
+                <img src={footLogo} alt="" className="block h-[42px] w-auto max-w-[160px] object-contain" />
+              </span>
+            )}
             <strong className="font-head text-[17px] text-white">{tx(settings.siteName, lang)}</strong>
           </span>
           <span className="leading-[1.7]">{tx(settings.footer.body, lang)}</span>
@@ -52,7 +50,7 @@ export function Footer({ settings, lang }: { settings: SiteSettings; lang: Local
           <strong className="text-[15px] text-white">{t.follow}</strong>
           <div className="flex flex-wrap gap-2.5">
             {settings.socials.map((s) => {
-              const [name, abbr, color] = PLATFORMS[s.platform];
+              const name = socialName(s);
               return (
                 <a
                   key={s.id}
@@ -61,10 +59,10 @@ export function Footer({ settings, lang }: { settings: SiteSettings; lang: Local
                   rel="noopener noreferrer"
                   title={name}
                   aria-label={name}
-                  className="grid size-[42px] place-items-center rounded-full text-[13px] font-bold text-white shadow-[0_0_0_1px_rgba(255,255,255,.18)] transition-transform duration-[250ms] ease-[cubic-bezier(.34,1.56,.64,1)] hover:-translate-y-[3px] hover:text-white"
-                  style={{ background: color }}
+                  className="grid size-[42px] place-items-center overflow-hidden rounded-full text-[13px] font-bold text-white shadow-[0_0_0_1px_rgba(255,255,255,.18)] transition-transform duration-[250ms] ease-[cubic-bezier(.34,1.56,.64,1)] hover:-translate-y-[3px] hover:text-white"
+                  style={{ background: socialBg(s) }}
                 >
-                  {abbr}
+                  <SocialGlyph social={s} size={19} />
                 </a>
               );
             })}

@@ -4,7 +4,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/Icon";
 import { LocalLink } from "@/components/LocalLink";
-import { Logo } from "@/components/Logo";
 import { href, stripLocale, tx } from "@/i18n/config";
 import { useI18n } from "@/i18n/client";
 import type { Img, Locale, MenuItem } from "@/types/site";
@@ -79,22 +78,19 @@ export function Header({ menu, siteName, logo, logoDark }: { menu: MenuItem[]; s
       {/* บนมือถือลดระยะห่างลง ให้โลโก้ ปุ่มภาษา ปุ่มธีม และเมนูพอดีจอกว้าง 360px */}
       <div className="mx-auto flex h-[76px] max-w-[1280px] items-center gap-2 px-4 sm:gap-5 sm:px-[var(--sec-px)]">
         <LocalLink href="/" aria-label={siteName} className="flex flex-none items-center gap-2.5 text-ink hover:text-ink">
-          {logo && logo !== "placeholder" ? (
+          {logo && logo !== "placeholder" && (
             <>
-              {/* โลโก้ที่อัปโหลดจากหน้าตั้งค่า ถ้าไม่มีโลโก้โหมดมืดจะใช้โลโก้โหมดสว่างแทน */}
+              {/* โลโก้ที่อัปโหลดจากหน้าตั้งค่า ถ้าไม่มีโลโก้โหมดมืดจะใช้โลโก้โหมดสว่างแทน ชื่อเว็บแสดงเป็นตัวอักษรข้าง ๆ แล้ว รูปจึงไม่ต้องมีคำอธิบาย */}
               {/* eslint-disable-next-line @next/next/no-img-element -- โลโก้ต้องคงสัดส่วนเดิมของรูป */}
-              <img src={logo} alt={siteName} className={`h-11 w-auto max-w-[200px] object-contain ${logoDark && logoDark !== "placeholder" ? "dark:hidden" : ""}`} />
+              <img src={logo} alt="" className={`h-11 w-auto max-w-[200px] object-contain ${logoDark && logoDark !== "placeholder" ? "dark:hidden" : ""}`} />
               {logoDark && logoDark !== "placeholder" && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={logoDark} alt={siteName} className="hidden h-11 w-auto max-w-[200px] object-contain dark:block" />
+                <img src={logoDark} alt="" className="hidden h-11 w-auto max-w-[200px] object-contain dark:block" />
               )}
             </>
-          ) : (
-            <>
-              <Logo />
-              <strong className="whitespace-nowrap font-head text-[17px] max-[399px]:hidden">{siteName}</strong>
-            </>
           )}
+          {/* ชื่อเว็บแสดงคู่กับโลโก้เสมอ ถ้ามีโลโก้และจอแคบมาก ซ่อนชื่อเพื่อให้ปุ่มด้านขวาพอดี */}
+          <strong className={`whitespace-nowrap font-head text-[17px] ${logo && logo !== "placeholder" ? "max-[399px]:hidden" : ""}`}>{siteName}</strong>
         </LocalLink>
         <span className="flex-1" />
 
@@ -129,7 +125,7 @@ export function Header({ menu, siteName, logo, logoDark }: { menu: MenuItem[]; s
 
         <LocalLink
           href="/contact"
-          className="hidden flex-none items-center gap-2 whitespace-nowrap rounded-ctl bg-accent-solid px-[18px] py-[11px] text-btn font-semibold text-white hover:text-white hover:brightness-110 quote:inline-flex"
+          className="hidden flex-none items-center gap-2 whitespace-nowrap rounded-btn bg-accent-solid px-[18px] py-[11px] text-btn font-semibold text-white hover:text-white hover:brightness-110 quote:inline-flex"
         >
           {t.quote}
         </LocalLink>
@@ -161,7 +157,38 @@ export function Header({ menu, siteName, logo, logoDark }: { menu: MenuItem[]; s
           closeLabel={t.close}
         />
       )}
+      <ScrollProgress />
     </header>
+  );
+}
+
+/** แถบสีแดงใต้เมนูด้านบน ยาวขึ้นตามที่เลื่อนหน้าลงไป และหดลงเมื่อเลื่อนขึ้น */
+function ScrollProgress() {
+  const bar = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    let raf = 0;
+    // แก้ความยาวของแถบตรง ๆ ไม่ต้องวาดส่วนหัวทั้งหมดใหม่ทุกครั้งที่เลื่อน
+    const update = () => {
+      raf = 0;
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      if (bar.current) bar.current.style.transform = `scaleX(${max > 0 ? Math.min(1, window.scrollY / max) : 0})`;
+    };
+    const onScroll = () => {
+      if (!raf) raf = requestAnimationFrame(update);
+    };
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
+  }, []);
+  return (
+    <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 -bottom-px h-[3px]">
+      <span ref={bar} className="block h-full origin-left bg-accent-solid" style={{ transform: "scaleX(0)" }} />
+    </span>
   );
 }
 
@@ -419,7 +446,7 @@ function Drawer({ menu, lang, siteName, path, sub, setSub, onClose, quote, close
           <LocalLink
             href="/contact"
             onClick={onClose}
-            className="flex min-h-[50px] items-center justify-center whitespace-nowrap rounded-ctl bg-accent-solid text-btn font-semibold text-white hover:text-white"
+            className="flex min-h-[50px] items-center justify-center whitespace-nowrap rounded-btn bg-accent-solid text-btn font-semibold text-white hover:text-white"
           >
             {quote}
           </LocalLink>

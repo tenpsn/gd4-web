@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { AIcon } from "@/admin/AIcon";
 import { AdminLangSwitch, AdminThemeToggle } from "@/admin/controls";
 import { getAdminDict } from "@/admin/i18n";
+import { BrandMark } from "@/admin/Brand";
+import { getBrand } from "@/admin/brand.server";
 import { getAdminLang } from "@/admin/server";
 import { getCurrentUser } from "@/server/auth";
 import { LoginForm } from "./LoginForm";
@@ -12,6 +14,7 @@ export const metadata: Metadata = { title: "Sign in" };
 export default async function LoginPage() {
   if (await getCurrentUser()) redirect("/admin");
   const t = getAdminDict(await getAdminLang());
+  const brand = await getBrand();
 
   return (
     <div className="flex min-h-full bg-bg">
@@ -20,9 +23,9 @@ export default async function LoginPage() {
         <span className="absolute inset-y-0 left-0 w-1.5 bg-brand-red" />
         <div className="absolute inset-0 bg-[repeating-linear-gradient(135deg,rgba(255,255,255,.035)_0_2px,transparent_2px_26px)]" />
         <div className="relative flex items-center gap-3">
-          <span className="grid size-11 place-items-center rounded-lg bg-[#2a5fb8] text-[15px] font-bold text-white shadow-[0_0_0_1px_rgba(255,255,255,.25)]">GD4</span>
+          <BrandMark brand={brand} onDark />
           <span className="flex flex-col leading-[1.2]">
-            <strong className="text-[17px]">GD4 Medical</strong>
+            <strong className="text-[17px]">{brand.name}</strong>
             <span className="text-[13px] text-on-panel2">{t.nav.admin}</span>
           </span>
         </div>
@@ -43,8 +46,8 @@ export default async function LoginPage() {
       <div className="flex min-h-full min-w-0 flex-1 flex-col">
         <div className="flex items-center gap-2.5 px-5 py-4">
           <span className="flex items-center gap-2.5 min-[900px]:hidden">
-            <span className="grid size-10 place-items-center rounded-lg bg-blue-solid text-sm font-bold text-white">GD4</span>
-            <strong className="text-base">GD4 Medical</strong>
+            <BrandMark brand={brand} size="size-10" />
+            <strong className="text-base">{brand.name}</strong>
           </span>
           <span className="flex-1" />
           <AdminLangSwitch size="lg" />

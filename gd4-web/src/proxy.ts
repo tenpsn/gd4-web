@@ -16,7 +16,7 @@ export function proxy(request: NextRequest) {
 
   if (pathname === "/admin" || pathname.startsWith("/admin/")) {
     const signedIn = !!readSessionToken(request.cookies.get(SESSION_COOKIE)?.value);
-    // หน้าแอดมินที่เปิดได้โดยไม่ต้องเข้าระบบ คือหน้าเข้าสู่ระบบและหน้าลิงก์เชิญ
+    // หน้าแอดมินที่เปิดได้โดยไม่ต้องเข้าระบบ คือหน้าเข้าสู่ระบบ หน้าลิงก์เชิญ และหน้าตั้งรหัสผ่านใหม่
     const isPublic = pathname === "/admin/login" || pathname.startsWith("/admin/invite/");
     if (!signedIn && !isPublic) {
       const url = request.nextUrl.clone();

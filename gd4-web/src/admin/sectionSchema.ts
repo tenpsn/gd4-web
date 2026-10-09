@@ -22,6 +22,8 @@ export type Field = {
   ph?: string;
   /** ช่องลิงก์ รับเฉพาะลิงก์ในเว็บ ลิงก์เว็บภายนอก เบอร์โทร และอีเมล */
   url?: boolean;
+  /** คำอธิบายใต้ช่อง */
+  hint?: LText;
 };
 
 export type TypeDef = {
@@ -45,7 +47,6 @@ const F = {
   btn2Label: { key: "btn2Label", kind: "text", label: L("ปุ่มที่ 2 · ข้อความ", "Button 2 · text"), i18n: true },
   btn2Url: { key: "btn2Url", kind: "mono", label: L("ปุ่มที่ 2 · ลิงก์", "Button 2 · link"), ph: "tel:021234567", url: true },
   img: { key: "img", kind: "image", label: L("รูปภาพ", "Image") },
-  imgAlt: { key: "imgAlt", kind: "text", label: L("คำอธิบายรูป (สำหรับผู้พิการทางสายตาและ SEO)", "Image description (accessibility & SEO)"), i18n: true },
   title: { key: "title", kind: "text", label: L("หัวข้อ", "Title"), i18n: true, req: true, wide: true },
   desc: { key: "desc", kind: "area", label: L("คำอธิบาย", "Description"), i18n: true, wide: true },
 } satisfies Record<string, Field>;
@@ -61,7 +62,7 @@ export const TYPES: Record<SectionType, TypeDef> = {
   text: { group: "basic", icon: "text", name: L("ข้อความ", "Text"), desc: L("หัวข้อและย่อหน้า", "Heading and paragraphs"), fields: [F.heading, F.body] },
   textImage: {
     group: "basic", icon: "image", name: L("ข้อความ + รูป", "Text + image"), desc: L("ข้อความคู่รูปภาพ พร้อมปุ่ม", "Copy beside an image, with a button"),
-    fields: [F.heading, F.body, F.img, F.imgAlt, { key: "imgSide", kind: "chips", label: L("ตำแหน่งรูป", "Image position"), opts: [{ v: "right", label: L("ขวา", "Right") }, { v: "left", label: L("ซ้าย", "Left") }] }, F.btnLabel, F.btnUrl],
+    fields: [F.heading, F.body, F.img, { key: "imgSide", kind: "chips", label: L("ตำแหน่งรูป", "Image position"), opts: [{ v: "right", label: L("ขวา", "Right") }, { v: "left", label: L("ซ้าย", "Left") }] }, F.btnLabel, F.btnUrl],
   },
   cards: {
     group: "basic", icon: "grid", name: L("การ์ดหลายใบ", "Cards"), desc: L("จุดเด่น ค่านิยม ใบรับรอง", "Highlights, values, certificates"),
@@ -97,7 +98,7 @@ export const TYPES: Record<SectionType, TypeDef> = {
   hero: {
     group: "special", icon: "image", name: L("สไลด์ Hero", "Hero slides"), desc: L("ภาพสไลด์ด้านบนสุดของหน้า", "Rotating banner at the top of the page"), noBg: true, defaultBg: "navy",
     fields: [chips("autoplay", L("เปลี่ยนสไลด์ทุก", "Slide interval"), [4, 5, 6, 8], L("วินาที", "s"))],
-    item: { name: L("สไลด์", "Slide"), summary: "title", fields: [F.title, { key: "sub", kind: "area", label: L("ข้อความรอง", "Subheading"), i18n: true, wide: true }, F.img, F.imgAlt, F.btnLabel, F.btnUrl] },
+    item: { name: L("สไลด์", "Slide"), summary: "title", fields: [F.title, { key: "sub", kind: "area", label: L("ข้อความรอง", "Subheading"), i18n: true, wide: true }, F.img, F.btnLabel, F.btnUrl] },
   },
   timeline: {
     group: "special", icon: "clock", name: L("ไทม์ไลน์", "Timeline"), desc: L("เหตุการณ์สำคัญตามปี", "Milestones by year"), defaultBg: "gray", fields: [F.heading],
@@ -109,14 +110,14 @@ export const TYPES: Record<SectionType, TypeDef> = {
   },
   logos: {
     group: "special", icon: "copy", name: L("โลโก้พันธมิตร", "Partner logos"), desc: L("แถบโลโก้ เลื่อนอัตโนมัติเมื่อมี 6 โลโก้ขึ้นไป", "Logo strip, scrolls with 6 or more"), defaultBg: "gray", fields: [F.heading],
-    item: { name: L("โลโก้", "Logo"), summary: "name", fields: [{ key: "name", kind: "text", label: L("ชื่อพันธมิตร", "Partner name"), req: true }, { key: "logo", kind: "image", label: L("ไฟล์โลโก้", "Logo file") }] },
+    item: { name: L("โลโก้", "Logo"), summary: "name", fields: [{ key: "name", kind: "text", label: L("ชื่อพันธมิตร", "Partner name") }, { key: "logo", kind: "image", label: L("ไฟล์โลโก้", "Logo file") }] },
   },
   products: {
     group: "special", icon: "box", name: L("รายการสินค้า", "Product grid"), desc: L("ดึงจากระบบจัดการสินค้าอัตโนมัติ", "Pulled from the product catalog"),
     fields: [F.heading, F.sub, { key: "category", kind: "chips", label: L("หมวดหมู่ที่แสดง", "Category shown"), opts: "cats", wide: true }, chips("count", L("จำนวนสินค้าที่แสดง", "Products shown"), [4, 8, 12])],
   },
   contact: {
-    group: "special", icon: "phone", name: L("ข้อมูลติดต่อและแผนที่", "Contact details & map"), desc: L("ที่อยู่ เบอร์โทร อีเมล พิกัด และฟอร์ม", "Address, phone, email, map and form"),
+    group: "special", icon: "phone", name: L("ข้อมูลติดต่อและแผนที่", "Contact details & map"), desc: L("ที่อยู่ เบอร์โทร อีเมล แผนที่ และฟอร์ม", "Address, phone, email, map and form"),
     fields: [{ ...F.heading, label: L("หัวข้อฟอร์ม", "Form heading") }],
   },
 };
@@ -127,8 +128,17 @@ export const CONTACT_FIELDS: Field[] = [
   { key: "phone", kind: "mono", label: L("เบอร์โทรศัพท์", "Phone"), req: true },
   { key: "email", kind: "mono", label: L("อีเมล", "Email"), req: true },
   { key: "hours", kind: "text", label: L("เวลาทำการ", "Business hours"), i18n: true, wide: true },
-  { key: "lat", kind: "number", label: L("ละติจูด", "Latitude") },
-  { key: "lng", kind: "number", label: L("ลองจิจูด", "Longitude") },
+  {
+    key: "mapEmbed",
+    kind: "area",
+    label: L("โค้ดฝังแผนที่", "Map embed code"),
+    wide: true,
+    ph: '<iframe src="https://www.google.com/maps/embed?pb=..."></iframe>',
+    hint: L(
+      "เปิดหน้าบริษัทใน Google Maps กดแชร์ เลือกฝังแผนที่ แล้วกดคัดลอก HTML",
+      "Open the company in Google Maps, choose Share, then Embed a map, and copy the HTML.",
+    ),
+  },
 ];
 
 export const ICON_CHOICES: IconName[] = ["award", "shield", "clock", "users", "check", "heart", "box", "chart", "phone", "pin"];
@@ -158,6 +168,8 @@ export function safeUrl(v: unknown): string {
   if (!s) return "";
   if (s.startsWith("/") && !s.startsWith("//")) return s;
   if (/^(#|https?:\/\/|tel:|mailto:)/i.test(s)) return s;
+  // ลิงก์เว็บที่พิมพ์มาแบบไม่มี https เช่น www.example.com ให้เติมให้
+  if (/^(www\.)?[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}(\/\S*)?$/i.test(s)) return `https://${s}`;
   return "";
 }
 

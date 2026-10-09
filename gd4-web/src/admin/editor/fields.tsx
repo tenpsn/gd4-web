@@ -1,10 +1,11 @@
 "use client";
 
 import { useRef } from "react";
+import { mapEmbedSrc } from "@/lib/mapEmbed";
 import type { Category, Img, LText, Locale } from "@/types/site";
 import { AIcon, type AIconName } from "../AIcon";
 import { useAdmin } from "../context";
-import { ICON_CHOICES, type Field } from "../sectionSchema";
+import { ICON_CHOICES, safeUrl, type Field } from "../sectionSchema";
 import { btn, FieldError, uploadFile, useToast } from "../ui";
 
 export type Obj = Record<string, unknown>;
@@ -42,10 +43,14 @@ export function FieldInput({ f, o, lang, onChange, err, categories, onPickMedia,
   const v = getVal(o, f, lang);
   const set = (x: string) => onChange(setVal(o, f, lang, x));
   const label = f.label[uiLang];
+  // ช่องลิงก์ที่พิมพ์ผิดรูปแบบจะถูกตัดทิ้งตอนบันทึก จึงเตือนไว้ก่อน ปุ่มที่ใช้ลิงก์นี้จะได้ไม่หายไปเงียบ ๆ
+  const urlErr = f.url && v.trim() && !safeUrl(v) ? (uiLang === "th" ? "ลิงก์ไม่ถูกต้อง ขึ้นต้นด้วย / สำหรับหน้าในเว็บ เช่น /contact หรือใส่ลิงก์เว็บอื่นเต็ม ๆ เช่น https://example.com" : "Invalid link. Start with / for a page on this site, such as /contact, or enter a full link such as https://example.com") : undefined;
+  const mapErr = f.key === "mapEmbed" && v.trim() && !mapEmbedSrc(v) ? (uiLang === "th" ? "ไม่ใช่โค้ดฝังแผนที่ของ Google Maps ระบบจะไม่แสดงแผนที่นี้" : "This is not a Google Maps embed code, so the map will not be shown") : undefined;
+  err = err ?? urlErr ?? mapErr;
 
   let input: React.ReactNode;
   if (f.kind === "area") {
-    input = <textarea rows={f.key === "body" || f.key === "a" ? 4 : 2} value={v} onChange={(e) => set(e.target.value)} aria-label={label} aria-invalid={!!err} lang={lang} className={`${control} resize-y text-[14.5px] leading-[1.65]`} />;
+    input = <textarea rows={f.key === "body" || f.key === "a" ? 4 : 2} value={v} onChange={(e) => set(e.target.value)} placeholder={f.ph} aria-label={label} aria-invalid={!!err} lang={f.i18n ? lang : undefined} className={`${control} resize-y text-[14.5px] leading-[1.65] ${f.key === "mapEmbed" ? "font-mono text-[13px]" : ""}`} />;
   } else if (f.kind === "image") {
     const src = o[f.key] as Img;
     const real = src && src !== "placeholder";
@@ -166,6 +171,7 @@ export function FieldInput({ f, o, lang, onChange, err, categories, onPickMedia,
         {input}
       </fieldset>
       <FieldError text={err} />
+      {f.hint && <span className="text-[13px] leading-normal text-ink3">{f.hint[uiLang]}</span>}
     </div>
   );
 }

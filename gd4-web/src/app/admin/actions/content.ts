@@ -1,14 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { alignMenu } from "@/lib/menu";
+import { same } from "@/lib/same";
 import { logActivity } from "@/server/activity";
 import { assertCan, can, getCurrentUser } from "@/server/auth";
 import { cleanDesign, cleanGlobal, cleanPage, globalOf, working } from "@/server/content";
 import { mutate, nowStr, readDb } from "@/server/store";
 import type { Working } from "@/server/types";
-import type { LText, MenuItem } from "@/types/site";
+import type { LText } from "@/types/site";
 
-const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
 /**
  * บันทึกงานที่กำลังแก้เป็นฉบับร่าง ใช้กับการดูตัวอย่างและปุ่มบันทึกร่าง
@@ -19,7 +20,7 @@ export type SaveDraftResult = { ok: true; rev: number } | { ok: false; conflict:
 export async function saveDraft(input: Working, baseRev: number): Promise<SaveDraftResult> {
   const user = await getCurrentUser();
   if (!user) throw new Error("Forbidden");
-  const db = readDb();
+  const db = await readDb();
   // มีคนอื่นหรือแท็บอื่นแก้ร่างไปแล้วหลังจากเปิดหน้านี้ จึงไม่บันทึกทับ
   if (Number(baseRev) !== db.draftRev) {
     const by = db.users.find((u) => u.id === db.draft?.userId);
@@ -37,7 +38,7 @@ export async function saveDraft(input: Working, baseRev: number): Promise<SaveDr
   if (contentChanged && !can(user, "content", "edit")) throw new Error("Forbidden");
   if (designChanged && !can(user, "design", "edit")) throw new Error("Forbidden");
 
-  const rev = mutate((d) => {
+  const rev = await mutate((d) => {
     d.draft = { ...next, userId: user.id, when: nowStr() };
     return ++d.draftRev;
   });
@@ -45,19 +46,20 @@ export async function saveDraft(input: Working, baseRev: number): Promise<SaveDr
 }
 
 export async function discardDraft() {
-  await assertCan("content", "edit");
-  mutate((d) => {
+  const me = await assertCan("content", "edit");
+  await mutate((d) => {
+    if (d.draft) logActivity(d, me.id, { th: "ทิ้งฉบับร่าง", en: "discarded draft" }, { th: "ฉบับร่างทั้งหมด", en: "all drafts" });
     d.draft = null;
     d.draftRev++;
   });
   return { ok: true };
 }
 
-/** เผยแพร่ฉบับร่างขึ้นเว็บจริง เก็บเป็นเวอร์ชันไว้ และรีเฟรชหน้าเว็บ */
-export async function publish(note?: LText): Promise<{ ok: boolean; error?: "forbidden"; rev?: number }> {
+/** เผยแพร่ฉบับร่างขึ้นเว็บจริง และรีเฟรชหน้าเว็บ */
+export async function publish(): Promise<{ ok: boolean; error?: "forbidden"; rev?: number }> {
   const user = await getCurrentUser();
   if (!user) throw new Error("Forbidden");
-  const db = readDb();
+  const db = await readDb();
   if (!db.draft) return { ok: true, rev: db.draftRev };
   const w = working(db);
   const contentChanged = !same(w.pages, db.pages) || !same(w.global, globalOf(db.settings));
@@ -66,49 +68,28 @@ export async function publish(note?: LText): Promise<{ ok: boolean; error?: "for
     return { ok: false, error: "forbidden" };
   }
 
-  mutate((d) => {
+  await mutate((d) => {
     const draft = d.draft!;
-    // ปรับเมนูหลักให้ตรงกับสวิตช์แสดงในเมนูของแต่ละหน้า
-    const menu: MenuItem[] = draft.global.menu.filter((m) => {
-      const pg = draft.pages.find((p) => p.slug === m.url);
-      return !pg || pg.inMenu || pg.system;
-    });
-    for (const p of draft.pages) {
-      if (p.inMenu && !p.system && !menu.some((m) => m.url === p.slug)) menu.push({ id: `m-${p.id}`, label: p.title, url: p.slug });
-    }
+    const { pages, menu } = alignMenu(draft.pages, draft.global.menu);
     const global = { ...draft.global, menu };
-    const changed = draft.pages.find((p) => !same(p, d.pages.find((x) => x.id === p.id))) ?? draft.pages[0];
+    // เทียบกับฉบับที่เผยแพร่อยู่ซึ่งจัดสวิตช์กับเมนูแบบเดียวกัน จะได้ไม่นับหน้าที่ไม่ได้แก้จริง
+    const live = alignMenu(d.pages, d.settings.menu);
+    const edited = pages.filter((p) => !same(p, live.pages.find((x) => x.id === p.id)));
+    const removed = d.pages.filter((p) => !pages.some((x) => x.id === p.id));
+    const changed = edited[0] ?? pages[0];
+    // บันทึกแยกทีละเรื่องที่เปลี่ยน เพื่อให้รู้ว่าเผยแพร่อะไรไปบ้าง
+    for (const p of edited) logActivity(d, user.id, "pubPage", p.title);
+    for (const p of removed) logActivity(d, user.id, { th: "ลบหน้า", en: "deleted page" }, p.title);
+    if (!same(draft.design, d.design)) logActivity(d, user.id, { th: "เผยแพร่การออกแบบ", en: "published design" }, { th: "ทั้งเว็บ", en: "whole site" });
+    if (!same(global, { ...globalOf(d.settings), menu: live.menu })) logActivity(d, user.id, { th: "เผยแพร่ส่วนหัวและท้ายเว็บ", en: "published header and footer" }, { th: "ทั้งเว็บ", en: "whole site" });
 
-    d.pages = draft.pages;
+    d.pages = pages;
     d.design = draft.design;
     Object.assign(d.settings, global);
-    const v = Math.max(0, ...d.versions.map((x) => x.v)) + 1;
-    const autoNote = note?.th ? note : designChanged && !contentChanged ? { th: "ปรับธีมและตัวอักษร", en: "Updated theme & type" } : { th: `เผยแพร่หน้า${changed.title.th}`, en: `Published ${changed.title.en}` };
-    d.versions.unshift({ v, when: nowStr(), userId: user.id, note: autoNote, pages: draft.pages, design: draft.design, global });
-    d.versions = d.versions.slice(0, 30);
     d.lastEdit = { page: changed.id, userId: user.id, when: nowStr() };
-    logActivity(d, user.id, "pubPage", changed.title);
     d.draft = null;
     d.draftRev++;
   });
   revalidatePath("/", "layout");
-  return { ok: true, rev: readDb().draftRev };
-}
-
-/** นำเวอร์ชันเก่ามาใส่ในฉบับร่าง เพื่อตรวจก่อนแล้วค่อยเผยแพร่ */
-export async function restoreVersion(v: number): Promise<{ ok: boolean }> {
-  const user = await assertCan("content", "edit");
-  const ver = readDb().versions.find((x) => x.v === Number(v));
-  if (!ver) return { ok: false };
-  mutate((d) => {
-    d.draft = { pages: structuredClone(ver.pages), design: structuredClone(ver.design), global: structuredClone(ver.global), userId: user.id, when: nowStr() };
-    d.draftRev++;
-  });
-  return { ok: true };
-}
-
-export async function listVersions() {
-  if (!(await getCurrentUser())) throw new Error("Forbidden");
-  const db = readDb();
-  return db.versions.map(({ v, when, userId, note }) => ({ v, when, note, who: db.users.find((u) => u.id === userId)?.name ?? { th: "—", en: "—" } }));
+  return { ok: true, rev: (await readDb()).draftRev };
 }

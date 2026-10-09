@@ -29,7 +29,7 @@ export function Video({ s, dark }: { s: VideoSection; dark: boolean }) {
         <H2>{heading}</H2>
         <p className={`m-0 ${ink2(dark)}`}>{tx(s.body, lang)}</p>
       </div>
-      <div className="relative aspect-video w-full max-w-[900px] overflow-hidden rounded-card">
+      <div className="relative aspect-video w-full max-w-[900px] overflow-hidden rounded-img">
         {playing && src ? (
           <iframe
             src={src}

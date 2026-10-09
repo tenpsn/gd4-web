@@ -4,7 +4,8 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { ADMIN_LANG_COOKIE } from "@/admin/i18n";
 import { verifyPassword } from "@/server/password";
-import { SESSION_COOKIE, SESSION_DAYS_REMEMBER, SESSION_HOURS, createSessionToken } from "@/server/session";
+import { startSession } from "@/server/auth";
+import { SESSION_COOKIE } from "@/server/session";
 import { mutate, nowStr, readDb } from "@/server/store";
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -29,7 +30,7 @@ export async function login(_prev: LoginState, fd: FormData): Promise<LoginState
   const f = fails.get(email);
   if (f && f.n >= 5 && f.until > Date.now()) return { errors: { email: "errCred" }, email };
 
-  const user = readDb().users.find((u) => u.email.toLowerCase() === email);
+  const user = (await readDb()).users.find((u) => u.email.toLowerCase() === email);
   const ok = !!user && user.status === "active" && verifyPassword(pw, user.passwordHash);
   if (!ok || !user) {
     const cur = f && f.until > Date.now() ? f : { n: 0, until: Date.now() + WINDOW };
@@ -39,16 +40,8 @@ export async function login(_prev: LoginState, fd: FormData): Promise<LoginState
   }
   fails.delete(email);
 
-  const maxAge = remember ? SESSION_DAYS_REMEMBER * 86400 : SESSION_HOURS * 3600;
-  (await cookies()).set(SESSION_COOKIE, createSessionToken(user.id, maxAge), {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    // ถ้าไม่เลือกจดจำฉัน คุกกี้จะหมดเมื่อปิดเบราว์เซอร์ และยังหมดอายุเองใน 12 ชั่วโมง
-    ...(remember ? { maxAge } : {}),
-  });
-  mutate((db) => {
+  await startSession(user.id, user.sessionVer ?? 0, remember);
+  await mutate((db) => {
     const u = db.users.find((x) => x.id === user.id);
     if (u) u.lastActive = nowStr();
   });
@@ -58,14 +51,6 @@ export async function login(_prev: LoginState, fd: FormData): Promise<LoginState
 export async function logout() {
   (await cookies()).delete(SESSION_COOKIE);
   redirect("/admin/login");
-}
-
-/** ตอนนี้ยังไม่ส่งอีเมลจริง และตอบเหมือนกันทุกครั้งเพื่อไม่ให้รู้ว่ามีอีเมลใดในระบบ */
-export async function requestReset(fd: FormData): Promise<{ ok: boolean; email: string }> {
-  const email = String(fd.get("email") ?? "").trim().slice(0, 160);
-  if (!EMAIL.test(email)) return { ok: false, email };
-  // งานที่ต้องทำเมื่อมีระบบหลังบ้าน สร้างรหัสรีเซ็ตแบบใช้ครั้งเดียวแล้วส่งลิงก์ทางอีเมล
-  return { ok: true, email };
 }
 
 export async function setAdminLang(lang: "th" | "en") {

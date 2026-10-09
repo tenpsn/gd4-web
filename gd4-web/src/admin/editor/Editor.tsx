@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
-import { discardDraft, listVersions, publish, restoreVersion, saveDraft } from "@/app/admin/actions/content";
+import { discardDraft, publish, saveDraft } from "@/app/admin/actions/content";
+import { renameInMenu, syncInMenu, syncMenu } from "@/lib/menu";
+import { same } from "@/lib/same";
 import type { Working } from "@/server/types";
 import type { Category, Img, LText, Locale, Page, Section, SectionType } from "@/types/site";
 import { AIcon, type AIconName } from "../AIcon";
@@ -52,7 +54,6 @@ function ScaledFrame({ width, label, onScale, children }: { width: number; label
 
 let seq = 0;
 const uid = (p: string) => `${p}${Date.now().toString(36)}${(++seq).toString(36)}`;
-const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
 /** ตรวจช่องที่ต้องกรอกของแต่ละภาษา แล้วคืนรายการข้อผิดพลาดตามส่วน รายการ ช่อง และภาษา */
 function validate(w: Working): Errors {
@@ -109,8 +110,6 @@ export function Editor({ mode, initial, hasDraft, initialRev, categories, initia
   const [addSec, setAddSec] = useState(false);
   const [pageModal, setPageModal] = useState<"new" | "edit" | null>(null);
   const [delPage, setDelPage] = useState(false);
-  const [versions, setVersions] = useState<Awaited<ReturnType<typeof listVersions>> | null>(null);
-  const [restoreV, setRestoreV] = useState<number | null>(null);
   const [pending, start] = useTransition();
   const frame = useRef<HTMLIFrameElement>(null);
   const saveTimer = useRef<number | null>(null);
@@ -303,7 +302,7 @@ export function Editor({ mode, initial, hasDraft, initialRev, categories, initia
         </div>
 
         {isGlobal ? (
-          <GlobalEditor g={w.global} lang={lang} canEdit={canEdit} onChange={(global) => change({ ...w, global })} />
+          <GlobalEditor g={w.global} lang={lang} canEdit={canEdit} onChange={(global) => change({ ...w, global, pages: syncInMenu(w.pages, global.menu) })} onPickMedia={(current, apply) => setMedia({ current, apply })} />
         ) : (
           <>
             {page.sections.length === 0 && (
@@ -381,17 +380,6 @@ export function Editor({ mode, initial, hasDraft, initialRev, categories, initia
         canPublish={canPublish}
         onDraft={doSaveDraft}
         onPublish={doPublish}
-        extra={
-          <button
-            type="button"
-            onClick={async () => setVersions(await listVersions())}
-            aria-label={t.content.versions}
-            title={t.content.versions}
-            className="grid size-10 flex-none cursor-pointer place-items-center rounded-lg border border-line bg-surface text-ink2 hover:border-blue-solid hover:text-blue"
-          >
-            <AIcon name="history" />
-          </button>
-        }
       />
 
       {conflict && (
@@ -581,11 +569,15 @@ export function Editor({ mode, initial, hasDraft, initialRev, categories, initia
               const id = meta.slug.slice(1).replace(/\//g, "-");
               const np: Page = { id: w.pages.some((p) => p.id === id) ? uid("p") : id, ...meta, system: false, sections: [newSection("pageHeader", uid("s"))] };
               (np.sections[0] as { heading: LText }).heading = { ...meta.title };
-              change({ ...w, pages: [...w.pages, np] });
+              const pages = [...w.pages, np];
+              change({ ...w, pages, global: { ...w.global, menu: syncMenu(w.global.menu, pages) } });
               setPageId(np.id);
               toast("ok", t.toast.pageAdded);
             } else {
-              setPage((p) => ({ ...p, title: meta.title, inMenu: meta.inMenu, slug: p.system ? p.slug : meta.slug }));
+              const next = { ...page, title: meta.title, inMenu: meta.inMenu, slug: page.system ? page.slug : meta.slug };
+              const pages = w.pages.map((p) => (p.id === page.id ? next : p));
+              // ปุ่มในเมนูของแท็บส่วนกลางเปลี่ยนตามชื่อ ลิงก์ และสวิตช์แสดงในเมนูทันที
+              change({ ...w, pages, global: { ...w.global, menu: syncMenu(renameInMenu(w.global.menu, page, next), pages) } });
               toast("ok", t.toast.pageSaved);
             }
             setPageModal(null);
@@ -599,7 +591,7 @@ export function Editor({ mode, initial, hasDraft, initialRev, categories, initia
         onOk={() => {
           setDelPage(false);
           setPageId("home");
-          withUndo({ ...w, pages: w.pages.filter((p) => p.id !== page.id) }, t.toast.delOk);
+          withUndo({ ...w, pages: w.pages.filter((p) => p.id !== page.id), global: { ...w.global, menu: w.global.menu.filter((m) => m.url !== page.slug) } }, t.toast.delOk);
         }}
         title={t.cf.delPageTitle}
         text={t.cf.undoText}
@@ -607,51 +599,6 @@ export function Editor({ mode, initial, hasDraft, initialRev, categories, initia
         okLabel={t.c.del}
       />
 
-      <Modal open={!!versions} onClose={() => setVersions(null)} width={560} title={t.content.vTitle} sub={t.content.vSub}>
-        <div className="flex flex-col px-6 pb-[22px] pt-2.5">
-          {versions?.map((v, i) => (
-            <div key={v.v} className="flex items-center gap-3.5 border-b border-line py-3.5">
-              <span className="w-10 font-mono text-[13px] font-semibold text-blue">v{v.v}</span>
-              <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <strong className="text-[14.5px] font-semibold">{v.note[ui]}</strong>
-                <span className="text-[13px] text-ink2">
-                  {v.who[ui]} · {relDate(v.when, ui)}
-                </span>
-              </span>
-              {i === 0 ? (
-                <span className="rounded-full bg-green-soft px-2.5 py-[3px] text-[12.5px] font-semibold text-green">{t.content.current}</span>
-              ) : (
-                canEdit && (
-                  <button type="button" onClick={() => setRestoreV(v.v)} className={`${btn.outline} min-h-[38px] px-3 text-sm`}>
-                    <AIcon name="undo" />
-                    {t.content.restore}
-                  </button>
-                )
-              )}
-            </div>
-          ))}
-        </div>
-      </Modal>
-      <Confirm
-        open={restoreV !== null}
-        onClose={() => setRestoreV(null)}
-        onOk={() =>
-          start(async () => {
-            const v = restoreV!;
-            setRestoreV(null);
-            setVersions(null);
-            const r = await restoreVersion(v);
-            if (!r.ok) return toast("err", t.toast.fix);
-            toast("ok", t.toast.restored);
-            window.location.reload();
-          })
-        }
-        title={t.cf.restoreTitle}
-        text={t.content.vSub}
-        okLabel={t.cf.restoreOk}
-        danger={false}
-        icon="undo"
-      />
     </div>
   );
 }
@@ -736,7 +683,7 @@ function PageModal({ mode, page, pages, onClose, onSave }: {
           <FieldError text={err.slug} />
           <span className="text-[13px] text-ink3">{system ? t.content.systemPage : t.content.pSlugHint}</span>
         </label>
-        <Switch on={inMenu} onChange={setInMenu} label={t.content.pMenu} hint={t.content.pMenuHint} disabled={system} />
+        <Switch on={inMenu} onChange={setInMenu} label={t.content.pMenu} hint={t.content.pMenuHint} />
         <button type="submit" hidden />
       </form>
     </Modal>

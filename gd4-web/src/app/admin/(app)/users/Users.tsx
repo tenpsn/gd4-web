@@ -2,13 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { ActivityList } from "@/admin/ActivityList";
 import { AIcon, type AIconName } from "@/admin/AIcon";
 import { avatarColor } from "@/admin/avatar";
 import { useAdmin } from "@/admin/context";
-import { downloadCsv } from "@/admin/csv";
-import { fmtDate, relDate } from "@/admin/i18n";
-import { btn, Confirm, FieldError, label, Modal, pageTitle, RadioCard, Req, useToast } from "@/admin/ui";
-import { ACTIONS, AREAS, ROLES, type Activity, type Perms, type PublicUser, type Role } from "@/server/types";
+import { relDate } from "@/admin/i18n";
+import { btn, Confirm, FieldError, label, Modal, PAGE_SIZE, pageTitle, Pager, RadioCard, Req, useToast } from "@/admin/ui";
+import { ACTIONS, allowed, AREAS, ROLES, superOnly, type Activity, type Perms, type PublicUser, type Role } from "@/server/types";
 import { deleteUser, resendInvite, savePerms, saveUser, setUserStatus, type UserErrors, type UserResult } from "../../actions/users";
 
 const ROLE_TONE: Record<Role, string> = {
@@ -22,13 +22,15 @@ const ST_TONE = { active: "bg-green-soft text-green", suspended: "bg-amber-soft 
 
 type Tab = "list" | "roles" | "log";
 
-export function Users({ me, users, perms, activity, canEdit, canDel }: {
+export function Users({ me, users, perms, activity, canEdit, canDel, canViewLog, canDelLog }: {
   me: number;
   users: PublicUser[];
   perms: Perms;
   activity: Activity[];
   canEdit: boolean;
   canDel: boolean;
+  canViewLog: boolean;
+  canDelLog: boolean;
 }) {
   const { lang, t } = useAdmin();
   const router = useRouter();
@@ -40,25 +42,24 @@ export function Users({ me, users, perms, activity, canEdit, canDel }: {
   const [invite, setInvite] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
-  const userBy = (id: number) => users.find((u) => u.id === id);
   const fail = (r: UserResult) => {
     if (r.ok) return false;
     if (r.errors) setErrors(r.errors);
     toast("err", r.error === "noSelf" ? t.toast.noSelf : r.error === "lastSuper" ? (lang === "th" ? "ต้องมีผู้ดูแลสูงสุดที่ใช้งานอยู่อย่างน้อย 1 คน" : "At least one active super admin is required") : t.toast.fix);
     return true;
   };
-  const run = (fn: () => Promise<UserResult>, okMsg: string, after?: (r: UserResult) => void) =>
+  const run = (fn: () => Promise<UserResult>, okMsg: string | ((r: UserResult) => string), after?: (r: UserResult) => void) =>
     start(async () => {
       const r = await fn();
       if (fail(r)) return;
-      toast("ok", okMsg);
+      toast("ok", typeof okMsg === "string" ? okMsg : okMsg(r));
       after?.(r);
       router.refresh();
     });
 
   const submitUser = () => {
     if (!form) return;
-    run(() => saveUser(form), form.id ? t.toast.userSaved : t.toast.invited, (r) => {
+    run(() => saveUser(form), () => (form.id ? t.toast.userSaved : t.users.added), (r) => {
       setForm(null);
       setErrors({});
       if (r.ok && r.inviteLink) setInvite(r.inviteLink);
@@ -68,7 +69,7 @@ export function Users({ me, users, perms, activity, canEdit, canDel }: {
   const tabs: [Tab, string, AIconName][] = [
     ["list", t.users.tList, "users"],
     ["roles", t.users.tRoles, "shield"],
-    ["log", t.users.tLog, "history"],
+    ...(canViewLog ? ([["log", t.users.tLog, "history"]] as [Tab, string, AIconName][]) : []),
   ];
 
   return (
@@ -112,12 +113,12 @@ export function Users({ me, users, perms, activity, canEdit, canDel }: {
           canDel={canDel}
           onEdit={(u) => (setErrors({}), setForm({ id: u.id, name: u.name[lang], email: u.email, role: u.role }))}
           onSuspend={(u) => run(() => setUserStatus(u.id, u.status === "suspended" ? "active" : "suspended"), u.status === "suspended" ? t.toast.unsuspended : t.toast.suspended)}
-          onResend={(u) => run(() => resendInvite(u.id), t.toast.invited, (r) => r.ok && r.inviteLink && setInvite(r.inviteLink))}
+          onResend={(u) => run(() => resendInvite(u.id), () => t.users.linkReady, (r) => r.ok && r.inviteLink && setInvite(r.inviteLink))}
           onDelete={setDel}
         />
       )}
       {tab === "roles" && <RolesTab perms={perms} users={users} canEdit={canEdit} />}
-      {tab === "log" && <LogTab activity={activity} users={users} userBy={userBy} />}
+      {tab === "log" && canViewLog && <LogTab activity={activity} users={users} canDel={canDelLog} />}
 
       {/* เพิ่มหรือแก้ไขผู้ดูแล */}
       <Modal
@@ -174,15 +175,13 @@ export function Users({ me, users, perms, activity, canEdit, canDel }: {
         )}
       </Modal>
 
-      {/* ใช้ชั่วคราวระหว่างพัฒนา เพราะยังไม่ได้เชื่อมระบบอีเมล จึงแสดงลิงก์เชิญให้คัดลอกเอง */}
-      <Modal open={!!invite} onClose={() => setInvite(null)} width={520} title={lang === "th" ? "ลิงก์เชิญ (โหมดทดสอบ)" : "Invite link (test mode)"} footer={<button type="button" onClick={() => setInvite(null)} className={btn.primary}>{t.c.done}</button>}>
+      {/* ถ้าส่งอีเมลเชิญไม่ได้ จะแสดงลิงก์ให้คัดลอกไปส่งเอง */}
+      <Modal open={!!invite} onClose={() => setInvite(null)} width={520} title={t.users.linkTitle} footer={<button type="button" onClick={() => setInvite(null)} className={btn.primary}>{t.c.done}</button>}>
         <div className="flex flex-col gap-3 px-6 py-5">
           <p className="m-0 text-sm leading-[1.6] text-ink2">
-            {lang === "th"
-              ? "ยังไม่ได้เชื่อมระบบส่งอีเมล ระหว่างนี้ส่งลิงก์นี้ให้ผู้ใช้เพื่อตั้งรหัสผ่าน ลิงก์ใช้ได้ 7 วัน"
-              : "Email is not connected yet. Send this link to the user to set a password. It is valid for 7 days."}
+            {t.users.linkText}
           </p>
-          <input readOnly value={invite ? `${window.location.origin}${invite}` : ""} onFocus={(e) => e.target.select()} className="field font-mono text-[13px]" />
+          <input readOnly value={invite ?? ""} onFocus={(e) => e.target.select()} className="field font-mono text-[13px]" />
         </div>
       </Modal>
 
@@ -211,6 +210,10 @@ function UserList({ users, me, canEdit, canDel, onEdit, onSuspend, onResend, onD
 }) {
   const { lang, t } = useAdmin();
   const stLabel = { active: t.users.sActive, suspended: t.users.sSuspended, invited: t.users.sInvited };
+  // แสดงหน้าละ 10 คน
+  const [page, setPage] = useState(1);
+  const pg = Math.min(page, Math.max(1, Math.ceil(users.length / PAGE_SIZE)));
+  const shown = users.slice((pg - 1) * PAGE_SIZE, pg * PAGE_SIZE);
   const last = (u: PublicUser) => (u.lastActive ? relDate(u.lastActive, lang) : t.users.sInvited);
   const actions = (u: PublicUser, size: string) => (
     <>
@@ -263,7 +266,7 @@ function UserList({ users, me, canEdit, canDel, onEdit, onSuspend, onResend, onD
             </tr>
           </thead>
           <tbody>
-            {users.map((u, i) => (
+            {shown.map((u, i) => (
               <tr key={u.id} style={{ animationDelay: `${i * 0.05}s` }} className="border-t border-line [animation:a-up_.4s_cubic-bezier(.2,.7,.2,1)_both] hover:bg-surface2">
                 <td className={`px-[18px] py-3 ${u.status === "suspended" ? "opacity-55" : ""}`}>
                   <div className="flex items-center gap-3">
@@ -296,7 +299,7 @@ function UserList({ users, me, canEdit, canDel, onEdit, onSuspend, onResend, onD
         </table>
       </div>
       <div className="flex flex-col gap-2.5 md2:hidden">
-        {users.map((u, i) => (
+        {shown.map((u, i) => (
           <div key={u.id} style={{ animationDelay: `${i * 0.05}s` }} className="card flex flex-col gap-2.5 p-3.5 [animation:a-up_.4s_both]">
             <div className={`flex items-center gap-3 ${u.status === "suspended" ? "opacity-55" : ""}`}>
               {avatar(u, "size-11 text-sm")}
@@ -315,6 +318,7 @@ function UserList({ users, me, canEdit, canDel, onEdit, onSuspend, onResend, onD
           </div>
         ))}
       </div>
+      <Pager page={pg} total={users.length} onPage={setPage} />
     </>
   );
 }
@@ -393,16 +397,22 @@ function RolesTab({ perms, users, canEdit }: { perms: Perms; users: PublicUser[]
                   <td className="px-5 py-2.5 text-[14.5px] font-medium">{areaLabel(a)}</td>
                   {ACTIONS.map((x) => (
                     <td key={x} className="px-2 py-1.5 text-center">
-                      <label className="inline-grid size-11 cursor-pointer place-items-center">
+                      {!allowed(a, x) ? (
+                        <span className="text-ink3" aria-hidden="true">
+                          —
+                        </span>
+                      ) : (
+                      <label className="inline-grid size-11 cursor-pointer place-items-center" title={superOnly(a, x) ? t.users.superOnly : undefined}>
                         <input
                           type="checkbox"
-                          checked={role === "super" || draft[role][a][x]}
-                          disabled={locked}
+                          checked={role === "super" || (!superOnly(a, x) && draft[role][a][x])}
+                          disabled={locked || superOnly(a, x)}
                           onChange={() => toggle(a, x)}
                           aria-label={`${areaLabel(a)} · ${t.users[`a_${x}`]}`}
                           className="size-5 cursor-pointer accent-[var(--blue-solid)] disabled:cursor-not-allowed"
                         />
                       </label>
+                      )}
                     </td>
                   ))}
                 </tr>
@@ -437,66 +447,12 @@ function RolesTab({ perms, users, canEdit }: { perms: Perms; users: PublicUser[]
   );
 }
 
-function LogTab({ activity, users, userBy }: { activity: Activity[]; users: PublicUser[]; userBy: (id: number) => PublicUser | undefined }) {
-  const { lang, t } = useAdmin();
-  const toast = useToast();
-  const [who, setWho] = useState("all");
-  const [q, setQ] = useState("");
-  const term = q.trim().toLowerCase();
-  const rows = activity.filter(
-    (a) => (who === "all" || String(a.userId) === who) && (!term || [a.action.th, a.action.en, a.target.th, a.target.en].some((x) => x.toLowerCase().includes(term))),
-  );
-  const exportCsv = () => {
-    downloadCsv(`gd4-activity-${new Date().toISOString().slice(0, 10)}.csv`, [
-      [t.users.when, t.users.who, t.users.what, t.inbox.subject],
-      ...rows.map((a) => [a.when, userBy(a.userId)?.name[lang] ?? "—", a.action[lang], a.target[lang]]),
-    ]);
-    toast("ok", t.toast.exported);
-  };
+/** ประวัติการแก้ไขทั้งหมด แสดงหน้าละ 10 แถว */
+function LogTab({ activity, users, canDel }: { activity: Activity[]; users: PublicUser[]; canDel: boolean }) {
+  const { t } = useAdmin();
   return (
-    <>
-      <div className="flex flex-wrap items-center gap-2.5">
-        <select value={who} onChange={(e) => setWho(e.target.value)} aria-label={t.users.who} className="min-h-[46px] flex-[0_1_220px] cursor-pointer rounded-[10px] border border-line bg-field px-3 text-[14.5px] text-ink outline-none">
-          <option value="all">{t.users.allUsers}</option>
-          {users.map((u) => (
-            <option key={u.id} value={u.id}>
-              {u.name[lang]}
-            </option>
-          ))}
-        </select>
-        <label className="relative block flex-[1_1_220px]">
-          <span className="sr-only">{t.users.logSearch}</span>
-          <span className="pointer-events-none absolute left-3 top-1/2 grid -translate-y-1/2 text-ink3">
-            <AIcon name="search" />
-          </span>
-          <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t.users.logSearch} className="field min-h-[46px] rounded-[10px] pl-10 text-[14.5px]" />
-        </label>
-        <button type="button" onClick={exportCsv} disabled={!rows.length} className={`${btn.outline} min-h-[46px] rounded-[10px] text-[14.5px] hover:border-green-solid hover:text-green`}>
-          <AIcon name="download" />
-          {t.inbox.export}
-        </button>
-      </div>
-      <section className="card overflow-hidden">
-        {rows.length === 0 && <div className="px-5 py-12 text-center text-[15px] text-ink2">{t.users.logEmpty}</div>}
-        {rows.map((a, i) => {
-          const u = userBy(a.userId);
-          return (
-            <div key={a.id} style={{ animationDelay: `${Math.min(i, 12) * 0.03}s` }} className="flex items-start gap-3.5 border-t border-line px-5 py-3.5 first:border-t-0 [animation:a-up_.35s_both]">
-              <span className="grid size-9 flex-none place-items-center rounded-full text-[12.5px] font-bold text-white" style={{ background: u ? avatarColor(u.id) : "#6b778a" }}>
-                {u?.ini[lang] ?? "?"}
-              </span>
-              <span className="flex min-w-0 flex-1 flex-col gap-[3px]">
-                <span className="text-[15px] leading-[1.55]">
-                  <strong className="font-semibold">{u?.name[lang] ?? "—"}</strong> {a.action[lang]} <span className="font-medium text-blue">{a.target[lang]}</span>
-                </span>
-                <span className="text-[13px] text-ink3">
-                  {fmtDate(a.when, lang)} · {relDate(a.when, lang)}
-                </span>
-              </span>
-            </div>
-          );
-        })}
-      </section>
-    </>
+    <section className="card overflow-hidden [&>ol>li:first-child]:border-t-0">
+      <ActivityList activity={activity} users={users} empty={t.users.logEmpty} fullDate canDel={canDel} />
+    </section>
   );
 }

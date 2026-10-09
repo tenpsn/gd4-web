@@ -39,6 +39,10 @@
 
   --r: 12px;
   --r-sm: 8px;
+  /* มุมโค้งของปุ่ม รูปภาพ และช่องกรอก ตั้งแยกได้ในหน้าธีมและตัวอักษร */
+  --r-btn: 8px;
+  --r-img: 12px;
+  --r-input: 8px;
 
   /* มือถือ จอเล็กกว่า 640 พิกเซล */
   --sec-py: 52px;
@@ -150,6 +154,9 @@
 
   --radius-card: var(--r);
   --radius-ctl: var(--r-sm);
+  --radius-btn: var(--r-btn);
+  --radius-img: var(--r-img);
+  --radius-input: var(--r-input);
   --shadow-card: var(--sh);
 
   --breakpoint-quote: 73.75rem; /* จอตั้งแต่ 1180 พิกเซล แสดงปุ่มขอใบเสนอราคาและเมนู 6 รายการ */
@@ -321,6 +328,32 @@ html[data-fade="1"] * {
 @keyframes s-spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+/* ช่องข้อความหลายบรรทัด ไม่ให้โค้งมากจนมุมกินข้อความ แม้เลือกช่องกรอกแบบแคปซูล */
+textarea.rounded-input {
+  border-radius: min(var(--r-input), 16px);
+}
+
+/* ส่วนของหน้าเว็บค่อย ๆ ลอยขึ้นทุกครั้งที่เลื่อนมาถึง ทั้งเลื่อนลงและเลื่อนขึ้น
+   ทำงานเมื่อสคริปต์ใส่ data-reveal ให้ html แล้วเท่านั้น ถ้าไม่มีสคริปต์เนื้อหาจะแสดงตามปกติ */
+@media screen and (prefers-reduced-motion: no-preference) {
+  html[data-reveal] [data-sec] > * {
+    opacity: 0;
+    transform: translateY(28px);
+    transition:
+      opacity 0.7s cubic-bezier(0.2, 0.7, 0.2, 1),
+      transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  html[data-reveal] [data-sec].in > * {
+    opacity: 1;
+    transform: none;
+  }
+  /* ชิ้นย่อยที่ขึ้นทีละชิ้น ให้เริ่มเล่นใหม่ทุกครั้งที่ส่วนนั้นเข้ามาในจอ */
+  html[data-reveal] [data-sec]:not(.in) .anim-up {
+    animation: none;
+    opacity: 0;
   }
 }
 

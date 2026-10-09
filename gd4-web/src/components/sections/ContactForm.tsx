@@ -11,6 +11,7 @@ type Status = "idle" | "sending" | "ok" | "err";
 export function ContactForm({ heading }: { heading: string }) {
   const { t } = useI18n();
   const [f, setF] = useState<ContactInput>(EMPTY_CONTACT);
+  const [consent, setConsent] = useState(false);
   const [errors, setErrors] = useState<ContactErrors>({});
   const [status, setStatus] = useState<Status>("idle");
 
@@ -21,10 +22,10 @@ export function ContactForm({ heading }: { heading: string }) {
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const er = validateContact(f);
+    const er = validateContact(f, consent);
     setErrors(er);
     if (Object.keys(er).length) {
-      const first = (Object.keys(er) as ContactField[])[0];
+      const first = Object.keys(er)[0];
       e.currentTarget.querySelector<HTMLElement>(`[name="${first}"]`)?.focus();
       return;
     }
@@ -55,10 +56,11 @@ export function ContactForm({ heading }: { heading: string }) {
           type="button"
           onClick={() => {
             setF(EMPTY_CONTACT);
+            setConsent(false);
             setErrors({});
             setStatus("idle");
           }}
-          className="min-h-11 cursor-pointer rounded-ctl border border-line bg-transparent px-[18px] font-semibold text-ink"
+          className="min-h-11 cursor-pointer rounded-btn border border-line bg-transparent px-[18px] font-semibold text-ink"
         >
           {t.c.again}
         </button>
@@ -74,10 +76,10 @@ export function ContactForm({ heading }: { heading: string }) {
   ];
   const auto: Partial<Record<ContactField, string>> = { name: "name", company: "organization", phone: "tel", email: "email" };
   const inputCls = (k: ContactField) =>
-    `w-full rounded-ctl border bg-bg text-body text-ink outline-none transition-[border-color,box-shadow] duration-200 focus:border-primary-solid focus:shadow-[0_0_0_3px_var(--c-soft)] ${
+    `w-full rounded-input border bg-bg text-body text-ink outline-none transition-[border-color,box-shadow] duration-200 focus:border-primary-solid focus:shadow-[0_0_0_3px_var(--c-soft)] ${
       errors[k] ? "border-err" : "border-line"
     }`;
-  const errText = (k: ContactField) =>
+  const errText = (k: ContactField | "consent") =>
     errors[k] && (
       <span id={`cf-${k}-err`} className="text-[13px] text-err [animation:s-up_.25s_both]">
         {t.c[errors[k]!]}
@@ -100,7 +102,8 @@ export function ContactForm({ heading }: { heading: string }) {
       )}
 
       {/* ช่องดักบอท ซ่อนไว้ไม่ให้คนเห็นและโปรแกรมอ่านหน้าจอไม่อ่าน */}
-      <input type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 opacity-0" />
+      {/* ใช้ชื่อที่เบราว์เซอร์ไม่รู้จัก ถ้าใช้ชื่อทั่วไปอย่าง website เบราว์เซอร์จะกรอกให้เองแล้วข้อความของคนจริงจะหายไป */}
+      <input type="text" name="gd4_hp" tabIndex={-1} autoComplete="off" aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 opacity-0" />
 
       <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
         {fields.map(([k, label, req, type]) => (
@@ -144,10 +147,33 @@ export function ContactForm({ heading }: { heading: string }) {
         {errText("msg")}
       </label>
 
+      <div className="flex flex-col gap-1.5">
+        <label className="flex cursor-pointer items-start gap-3 text-sm leading-[1.6] text-ink2">
+          <input
+            name="consent"
+            type="checkbox"
+            checked={consent}
+            onChange={(e) => {
+              setConsent(e.target.checked);
+              setErrors((x) => ({ ...x, consent: undefined }));
+            }}
+            required
+            aria-invalid={!!errors.consent}
+            aria-describedby={errors.consent ? "cf-consent-err" : undefined}
+            className="mt-[3px] size-[18px] flex-none cursor-pointer accent-[var(--c-primary-solid)]"
+          />
+          <span>
+            {t.c.consent}
+            <span className="text-accent"> *</span>
+          </span>
+        </label>
+        {errText("consent")}
+      </div>
+
       <button
         type="submit"
         disabled={sending}
-        className="flex min-h-[52px] cursor-pointer items-center justify-center gap-2.5 rounded-ctl border-0 bg-accent-solid text-btn font-semibold text-white transition-[filter,transform] duration-150 hover:brightness-110 active:scale-[.99] disabled:cursor-wait"
+        className="flex min-h-[52px] cursor-pointer items-center justify-center gap-2.5 rounded-btn border-0 bg-accent-solid text-btn font-semibold text-white transition-[filter,transform] duration-150 hover:brightness-110 active:scale-[.99] disabled:cursor-wait"
       >
         {sending ? (
           <>

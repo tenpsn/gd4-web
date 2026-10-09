@@ -8,6 +8,7 @@ import { Spinner } from "@/admin/controls";
 import { btn, FieldError, label } from "@/admin/ui";
 import { acceptInvite } from "../../actions/users";
 
+/** ฟอร์มตั้งรหัสผ่านจากลิงก์เชิญ */
 export function InviteForm({ token }: { token: string }) {
   const { lang, t } = useAdmin();
   const [pw, setPw] = useState("");
@@ -16,6 +17,7 @@ export function InviteForm({ token }: { token: string }) {
   const [done, setDone] = useState(false);
   const [pending, start] = useTransition();
   const title = lang === "th" ? "ตั้งรหัสผ่านเพื่อเริ่มใช้งาน" : "Set a password to get started";
+  const expired = lang === "th" ? "ลิงก์เชิญหมดอายุหรือถูกใช้ไปแล้ว ขอลิงก์ใหม่จากผู้ดูแล" : "This invite link has expired or was already used. Ask an admin for a new one.";
 
   if (done) {
     return (
@@ -47,7 +49,7 @@ export function InviteForm({ token }: { token: string }) {
           start(async () => {
             const r = await acceptInvite(token, pw);
             if (r.ok) setDone(true);
-            else setErr(r.error === "errNw" ? t.set.errNw : lang === "th" ? "ลิงก์เชิญหมดอายุหรือถูกใช้ไปแล้ว ขอลิงก์ใหม่จากผู้ดูแล" : "This invite link has expired or was already used. Ask an admin for a new one.");
+            else setErr(r.error === "errNw" ? t.set.errNw : expired);
           });
         }}
       >

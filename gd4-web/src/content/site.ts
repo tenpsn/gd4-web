@@ -37,7 +37,6 @@ export const SETTINGS: SiteSettings = {
     { code: "th", name: "ไทย", on: true, def: true, fixed: true },
     { code: "en", name: "English", on: true, fixed: true },
   ],
-  autoBackup: true,
   seo: {
     title: L("GD4 Medical · ผู้จัดจำหน่ายเครื่องมือแพทย์ครบวงจร", "GD4 Medical · End-to-end medical equipment distributor"),
     description: L(
@@ -50,8 +49,7 @@ export const SETTINGS: SiteSettings = {
     phone: "02-123-4567",
     email: "info@gdfourmedical.com",
     hours: L("จันทร์–ศุกร์ 08:30–17:30 น. · เสาร์ 08:30–12:00 น.", "Mon–Fri 08:30–17:30 · Sat 08:30–12:00"),
-    lat: 13.7563,
-    lng: 100.5651,
+    mapEmbed: "",
   },
   menu: [
     { id: "m-home", label: L("หน้าแรก", "Home"), url: "/" },
@@ -117,10 +115,10 @@ export const PAGES: Page[] = [
         bg: "navy",
         autoplay: 6,
         items: items([
-          { title: L("เครื่องมือแพทย์มาตรฐานสากล พร้อมทีมดูแลที่คุณวางใจได้", "Certified medical equipment, backed by a team you can rely on"), sub: L("จัดหา ติดตั้ง และดูแลเครื่องมือแพทย์ให้โรงพยาบาลและคลินิกทั่วประเทศ", "Sourcing, installation and lifetime support for hospitals and clinics nationwide"), img: "placeholder", imgAlt: L("ภาพหอผู้ป่วยวิกฤต", "ICU ward"), btnLabel: L("ดูสินค้าทั้งหมด", "View all products"), btnUrl: "/products" },
-          { title: L("ติดตามผู้ป่วยแม่นยำ ทุกเตียงตลอด 24 ชั่วโมง", "Accurate monitoring at every bedside, around the clock"), sub: L("เครื่องติดตามสัญญาณชีพเชื่อมต่อสถานีพยาบาล แจ้งเตือนได้ทันที", "Monitors connect to the nurse station and alert instantly"), img: "placeholder", imgAlt: L("เครื่อง PM-12", "PM-12 monitor"), btnLabel: L("ดูสินค้าทั้งหมด", "View all products"), btnUrl: "/products" },
-          { title: L("ภาพวินิจฉัยคมชัด", "Clear diagnostic imaging"), sub: L("อัลตราซาวด์และเอกซเรย์ดิจิทัล พร้อมติดตั้งโดยวิศวกร", "Ultrasound and digital X-ray, installed by our engineers"), img: "placeholder", imgAlt: L("ห้องตรวจอัลตราซาวด์", "Ultrasound room"), btnLabel: L("ดูสินค้าทั้งหมด", "View all products"), btnUrl: "/products" },
-          { title: L("วิศวกรพร้อมดูแลเครื่องของคุณทั่วประเทศ", "Engineers nationwide"), sub: L("ศูนย์บริการ 3 แห่ง ครอบคลุม 77 จังหวัด", "Three service centers covering all 77 provinces"), img: "placeholder", imgAlt: L("วิศวกรหน้างาน", "Engineer on site"), btnLabel: L("ดูสินค้าทั้งหมด", "View all products"), btnUrl: "/products" },
+          { title: L("เครื่องมือแพทย์มาตรฐานสากล พร้อมทีมดูแลที่คุณวางใจได้", "Certified medical equipment, backed by a team you can rely on"), sub: L("จัดหา ติดตั้ง และดูแลเครื่องมือแพทย์ให้โรงพยาบาลและคลินิกทั่วประเทศ", "Sourcing, installation and lifetime support for hospitals and clinics nationwide"), img: "placeholder", btnLabel: L("ดูสินค้าทั้งหมด", "View all products"), btnUrl: "/products" },
+          { title: L("ติดตามผู้ป่วยแม่นยำ ทุกเตียงตลอด 24 ชั่วโมง", "Accurate monitoring at every bedside, around the clock"), sub: L("เครื่องติดตามสัญญาณชีพเชื่อมต่อสถานีพยาบาล แจ้งเตือนได้ทันที", "Monitors connect to the nurse station and alert instantly"), img: "placeholder", btnLabel: L("ดูสินค้าทั้งหมด", "View all products"), btnUrl: "/products" },
+          { title: L("ภาพวินิจฉัยคมชัด", "Clear diagnostic imaging"), sub: L("อัลตราซาวด์และเอกซเรย์ดิจิทัล พร้อมติดตั้งโดยวิศวกร", "Ultrasound and digital X-ray, installed by our engineers"), img: "placeholder", btnLabel: L("ดูสินค้าทั้งหมด", "View all products"), btnUrl: "/products" },
+          { title: L("วิศวกรพร้อมดูแลเครื่องของคุณทั่วประเทศ", "Engineers nationwide"), sub: L("ศูนย์บริการ 3 แห่ง ครอบคลุม 77 จังหวัด", "Three service centers covering all 77 provinces"), img: "placeholder", btnLabel: L("ดูสินค้าทั้งหมด", "View all products"), btnUrl: "/products" },
         ]),
       },
       {
@@ -181,7 +179,7 @@ export const PAGES: Page[] = [
         heading: L("เกี่ยวกับ GD4 Medical", "About GD4 Medical"),
         body: L("GD4 Medical ก่อตั้งในปี 2552 เป็นผู้จัดจำหน่ายเครื่องมือแพทย์ครบวงจร ดูแลตั้งแต่การจัดหา ติดตั้ง อบรม ไปจนถึงบริการหลังการขายตลอดอายุการใช้งาน", "Founded in 2009, GD4 Medical is an end-to-end medical equipment distributor covering sourcing, installation, training and after-sales service for the full life of each device."),
         img: "placeholder",
-        imgAlt: L("อาคารสำนักงานใหญ่", "Head office"),
+       
         imgSide: "right",
         btnLabel: L("ติดต่อเรา", "Contact us"),
         btnUrl: "/contact",
@@ -220,7 +218,7 @@ export const PAGES: Page[] = [
         heading: L("ทีมวิศวกรที่ดูแลคุณ", "The engineers behind your equipment"),
         body: L("วิศวกรชีวการแพทย์กว่า 40 คน ผ่านการอบรมจากผู้ผลิตโดยตรงและอบรมซ้ำทุกปี", "Over 40 biomedical engineers, trained by manufacturers and retrained every year."),
         img: "placeholder",
-        imgAlt: L("ทีมวิศวกร GD4", "GD4 engineers"),
+       
         imgSide: "left",
         btnLabel: L("บริการหลังการขาย", "Service"),
         btnUrl: "/service",

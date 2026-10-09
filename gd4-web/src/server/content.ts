@@ -1,13 +1,16 @@
 import "server-only";
 import { RESERVED_SLUGS, safeUrl, SLUG_RE, TYPES } from "@/admin/sectionSchema";
 import { DEFAULT_DESIGN, FONT_CHOICES, SIZE_RANGE } from "@/content/design";
+import { mapEmbedSrc } from "@/lib/mapEmbed";
+import { alignMenu } from "@/lib/menu";
 import type { ColorKey, CustomFont, Design, IconName, LText, MenuItem, Page, Section, SectionBg, SectionType, SiteSettings, SocialPlatform } from "@/types/site";
 import type { DB, GlobalContent, Working } from "./types";
 
-/** ฉบับที่หน้าแก้ไขใช้ทำงาน ถ้ามีฉบับร่างใช้ฉบับร่าง ถ้าไม่มีใช้ฉบับที่เผยแพร่อยู่ */
+/** ฉบับที่หน้าแก้ไขใช้ทำงาน ถ้ามีฉบับร่างใช้ฉบับร่าง ถ้าไม่มีใช้ฉบับที่เผยแพร่อยู่ เมนูหลักปรับให้ตรงกับสวิตช์ของแต่ละหน้าเสมอ */
 export function working(db: DB): Working {
-  if (db.draft) return { pages: db.draft.pages, design: db.draft.design, global: db.draft.global };
-  return { pages: db.pages, design: db.design, global: globalOf(db.settings) };
+  const w = db.draft ? { pages: db.draft.pages, design: db.draft.design, global: db.draft.global } : { pages: db.pages, design: db.design, global: globalOf(db.settings) };
+  const { pages, menu } = alignMenu(w.pages, w.global.menu);
+  return { ...w, pages, global: { ...w.global, menu } };
 }
 
 export const globalOf = (s: SiteSettings): GlobalContent => ({ menu: s.menu, socials: s.socials, footer: s.footer, contact: s.contact });
@@ -23,7 +26,7 @@ const img = (v: unknown) => (v === "placeholder" ? "placeholder" : typeof v === 
 const id = (v: unknown, fallback: string) => (typeof v === "string" && /^[\w-]{1,64}$/.test(v) ? v : fallback);
 const BGS: SectionBg[] = ["white", "gray", "blue", "navy"];
 const ICONS: IconName[] = ["award", "users", "clock", "shield", "box", "chart", "heart", "phone", "check", "pin", "mail", "home"];
-const PLATFORMS: SocialPlatform[] = ["facebook", "line", "youtube", "instagram", "linkedin", "tiktok", "x"];
+const PLATFORMS: SocialPlatform[] = ["facebook", "line", "youtube", "instagram", "linkedin", "tiktok", "x", "custom"];
 const hex = (v: unknown, fb: string) => (typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v) ? v.toLowerCase() : fb);
 const num = (v: unknown, min: number, max: number, fb: number) => {
   const n = Number(v);
@@ -108,11 +111,14 @@ export function cleanGlobal(raw: unknown, fb: GlobalContent): GlobalContent {
       ? { children: m.children.slice(0, 12).map((k) => ({ id: id(k?.id, fresh("mk")), label: lt(k?.label, 80), url: safeUrl(k?.url) || "/" })) }
       : {}),
   }));
-  const socials = (Array.isArray(g.socials) ? g.socials : fb.socials).slice(0, 10).map((x) => ({
-    id: id(x?.id, fresh("so")),
-    platform: PLATFORMS.includes(x?.platform as SocialPlatform) ? (x!.platform as SocialPlatform) : "facebook",
-    url: /^https?:\/\//i.test(String(x?.url)) ? str(x?.url, 300) : "",
-  }));
+  const socials = (Array.isArray(g.socials) ? g.socials : fb.socials).slice(0, 10).map((x) => {
+    const platform = PLATFORMS.includes(x?.platform as SocialPlatform) ? (x!.platform as SocialPlatform) : "facebook";
+    const base = { id: id(x?.id, fresh("so")), platform, url: /^https?:\/\//i.test(String(x?.url)) ? str(x?.url, 300) : "" };
+    // ช่องทางอื่นเก็บชื่อและโลโก้ที่แอดมินใส่เองด้วย
+    if (platform !== "custom") return base;
+    const icon = img(x?.icon);
+    return { ...base, name: str(x?.name, 40).trim(), icon: icon === "placeholder" ? null : icon };
+  });
   const c = (g.contact ?? fb.contact) as Partial<GlobalContent["contact"]>;
   return {
     menu,
@@ -123,8 +129,7 @@ export function cleanGlobal(raw: unknown, fb: GlobalContent): GlobalContent {
       phone: str(c.phone, 40),
       email: str(c.email, 160),
       hours: lt(c.hours, 200),
-      lat: num(c.lat, -90, 90, fb.contact.lat),
-      lng: num(c.lng, -180, 180, fb.contact.lng),
+      mapEmbed: mapEmbedSrc(str(c.mapEmbed, 4000)),
     },
   };
 }
@@ -160,6 +165,9 @@ export function cleanDesign(raw: unknown): Design {
     ls: { heading: num(d.ls?.heading, -1, 4, D.ls.heading), body: num(d.ls?.body, -1, 4, D.ls.body) },
     colors: { light: colors("light"), dark: colors("dark") },
     radius: num(d.radius, 0, 28, D.radius),
+    btnRadius: [0, 4, 8, 12, 999].includes(Number(d.btnRadius)) ? Number(d.btnRadius) : D.btnRadius,
+    imgRadius: num(d.imgRadius, 0, 28, D.imgRadius),
+    inputRadius: [0, 4, 8, 12, 999].includes(Number(d.inputRadius)) ? Number(d.inputRadius) : D.inputRadius,
     spacing: [0.75, 1, 1.3].includes(Number(d.spacing)) ? Number(d.spacing) : 1,
   };
 }

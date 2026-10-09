@@ -1,19 +1,25 @@
 /**
  * โครงสร้างข้อมูลฝั่งหลังบ้าน ตามต้นแบบหน้าแอดมิน
- * ต่อไปจะกลายเป็นตารางในฐานข้อมูล PostgreSQL
+ * แต่ละรายการเก็บเป็นหนึ่งแถวในตาราง PostgreSQL ดูที่ server db.ts
  */
 import type { Category, Design, LText, Page, Product, SiteSettings } from "@/types/site";
 
 export type Role = "super" | "editor" | "products" | "viewer";
 export const ROLES: Role[] = ["super", "editor", "products", "viewer"];
 
-export type Area = "dashboard" | "products" | "content" | "design" | "inbox" | "users" | "settings";
-export const AREAS: Area[] = ["dashboard", "products", "content", "design", "inbox", "users", "settings"];
+export type Area = "dashboard" | "products" | "content" | "design" | "inbox" | "users" | "activity" | "settings";
+export const AREAS: Area[] = ["dashboard", "products", "content", "design", "inbox", "users", "activity", "settings"];
 
 export type Action = "view" | "edit" | "del" | "publish";
 export const ACTIONS: Action[] = ["view", "edit", "del", "publish"];
 
 export type Perms = Record<Role, Record<Area, Record<Action, boolean>>>;
+
+/** สิทธิ์ที่ใช้ได้ในแต่ละส่วน ส่วนที่ไม่ได้ระบุใช้ได้ทุกสิทธิ์ ประวัติการแก้ไขมีแค่ดูกับลบ */
+export const AREA_ACTIONS: Partial<Record<Area, Action[]>> = { activity: ["view", "del"] };
+export const allowed = (a: Area, x: Action) => (AREA_ACTIONS[a] ?? ACTIONS).includes(x);
+/** สิทธิ์ที่ให้ได้เฉพาะผู้ดูแลสูงสุด ลบประวัติได้แค่ผู้ดูแลสูงสุดเพื่อให้ประวัติใช้เป็นหลักฐานได้ */
+export const superOnly = (a: Area, x: Action) => a === "activity" && x === "del";
 
 export type AdminUser = {
   id: number;
@@ -30,10 +36,12 @@ export type AdminUser = {
   /** ข้อมูลลิงก์เชิญที่ใช้ได้ครั้งเดียว และเวลาหมดอายุ */
   inviteHash?: string;
   inviteExpires?: number;
+  /** รุ่นการเข้าระบบ เพิ่มขึ้นทุกครั้งที่เปลี่ยนรหัสผ่าน เพื่อให้เครื่องอื่นที่เข้าระบบอยู่หลุดออก */
+  sessionVer?: number;
 };
 
 /** ข้อมูลผู้ใช้ที่ส่งไปหน้าเว็บได้อย่างปลอดภัย */
-export type PublicUser = Omit<AdminUser, "passwordHash" | "inviteHash" | "inviteExpires">;
+export type PublicUser = Omit<AdminUser, "passwordHash" | "inviteHash" | "inviteExpires" | "sessionVer">;
 
 export type MessageStatus = "new" | "read" | "replied";
 
@@ -46,6 +54,8 @@ export type Message = {
   msg: string;
   subject: string;
   date: string;
+  /** เวลาที่ลูกค้าติ๊กยินยอมให้เก็บข้อมูล ข้อความเก่าก่อนมีช่องนี้จะไม่มีค่า */
+  consentAt?: string;
   status: MessageStatus;
 };
 
@@ -68,12 +78,9 @@ export type DB = {
   perms: Perms;
   activity: Activity[];
   lastEdit: { page: string; userId: number; when: string };
-  backups: Backup[];
   /** รูปภาพที่อัปโหลดไว้ในคลังรูป */
   media: MediaItem[];
   design: Design;
-  /** ฉบับที่เคยเผยแพร่ของหน้าและดีไซน์ เรียงจากใหม่ไปเก่า ใช้สำหรับย้อนกลับฉบับเดิม */
-  versions: Version[];
   /** งานแก้ไขที่ยังไม่เผยแพร่ เป็น null ถ้าไม่มีงานค้าง */
   draft: (Working & { userId: number; when: string }) | null;
   /** เลขรุ่นงานร่างที่เพิ่มทุกครั้งที่มีการเปลี่ยน ใช้ตรวจว่ามีคนแก้ทับกันหรือไม่ */
@@ -86,8 +93,4 @@ export type GlobalContent = Pick<SiteSettings, "menu" | "socials" | "footer" | "
 /** ทุกอย่างที่หน้าแก้ไขเนื้อหาและธีมแก้ได้ ทั้งฉบับที่เผยแพร่และฉบับร่าง */
 export type Working = { pages: Page[]; design: Design; global: GlobalContent };
 
-export type Version = { v: number; when: string; userId: number; note: LText } & Working;
-
 export type MediaItem = { src: string; name: string; size: number; when: string; userId: number };
-
-export type Backup = { id: string; when: string; size: number; auto: boolean; userId?: number };

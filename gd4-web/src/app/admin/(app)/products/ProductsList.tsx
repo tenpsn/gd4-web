@@ -6,13 +6,13 @@ import { useState, useSyncExternalStore, useTransition } from "react";
 import { AIcon } from "@/admin/AIcon";
 import { useAdmin } from "@/admin/context";
 import { fmtDate, relDate } from "@/admin/i18n";
-import { btn, Confirm, pageTitle, Pill, useToast } from "@/admin/ui";
+import { btn, Confirm, PAGE_SIZE, pageTitle, Pager, Pill, useToast } from "@/admin/ui";
 import type { Category, LText, Product } from "@/types/site";
 import { deleteProducts } from "../../actions/products";
 import { CategoriesModal } from "./CategoriesModal";
 
 type Row = Pick<Product, "id" | "sku" | "name" | "category" | "status" | "img" | "updatedAt" | "updatedBy">;
-const PER = 8;
+const PER = PAGE_SIZE;
 const VIEW_KEY = "admin-products-view";
 
 const viewSubs = new Set<() => void>();
@@ -86,6 +86,8 @@ export function ProductsList({ products, categories, users, initialQ, canEdit, c
   const items = filtered.slice((cur - 1) * PER, cur * PER);
   const isFiltered = !!term || cat !== "all" || status !== "all";
   const allChecked = items.length > 0 && items.every((p) => sel.includes(p.id));
+  // เลือกข้ามหน้าและข้ามตัวกรองได้ นับสินค้าที่เลือกไว้แต่ไม่ได้แสดงในหน้านี้
+  const offPage = sel.filter((id) => !items.some((p) => p.id === id)).length;
 
   const toggle = (id: string) => setSel((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
   const clearFilters = () => {
@@ -212,9 +214,14 @@ export function ProductsList({ products, categories, users, initialQ, canEdit, c
 
       {sel.length > 0 && (
         <div className="flex flex-wrap items-center gap-2.5 rounded-[10px] border border-blue-solid bg-soft py-2.5 pl-4 pr-3 [animation:a-up_.3s_cubic-bezier(.2,.7,.2,1)_both]">
-          <strong className="flex-1 text-[14.5px] text-blue">
-            {t.c.selected} {sel.length} {t.c.items}
-          </strong>
+          <span className="flex flex-1 flex-col gap-0.5">
+            <strong className="text-[14.5px] text-blue">
+              {t.c.selected} {sel.length} {t.c.items}
+            </strong>
+            {offPage > 0 && (
+              <span className="text-[13px] text-ink2">{lang === "th" ? `ในนี้มี ${offPage} รายการที่เลือกไว้จากหน้าอื่น` : `${offPage} of them selected on other pages`}</span>
+            )}
+          </span>
           <button type="button" onClick={() => setSel([])} className="min-h-10 cursor-pointer rounded-lg border-0 bg-transparent px-3.5 text-[14.5px] text-ink hover:bg-surface">
             {t.c.clear}
           </button>
@@ -374,44 +381,14 @@ export function ProductsList({ products, categories, users, initialQ, canEdit, c
         </>
       )}
 
-      {pages > 1 && (
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <span className="text-sm text-ink2">
-            {lang === "th"
-              ? `แสดง ${(cur - 1) * PER + 1}–${Math.min(cur * PER, filtered.length)} จาก ${filtered.length} รายการ`
-              : `Showing ${(cur - 1) * PER + 1}–${Math.min(cur * PER, filtered.length)} of ${filtered.length}`}
-          </span>
-          <div className="flex gap-1.5">
-            <button type="button" onClick={() => setPage(cur - 1)} disabled={cur <= 1} aria-label="Previous" className={pagerBtn}>
-              <AIcon name="chevL" />
-            </button>
-            {Array.from({ length: pages }, (_, i) => i + 1).map((n) => (
-              <button
-                key={n}
-                type="button"
-                onClick={() => setPage(n)}
-                aria-current={n === cur ? "page" : undefined}
-                className={`h-[42px] min-w-[42px] cursor-pointer rounded-lg border text-[14.5px] font-semibold transition-colors ${
-                  n === cur ? "border-blue-solid bg-blue-solid text-white" : "border-line bg-surface text-ink"
-                }`}
-              >
-                {n}
-              </button>
-            ))}
-            <button type="button" onClick={() => setPage(cur + 1)} disabled={cur >= pages} aria-label="Next" className={pagerBtn}>
-              <AIcon name="chevR" />
-            </button>
-          </div>
-        </div>
-      )}
+      <Pager page={cur} total={filtered.length} onPage={setPage} />
 
       <Confirm
         open={!!confirm}
         onClose={() => setConfirm(null)}
         onOk={() => confirm && !pending && doDelete(confirm)}
         title={confirm && confirm.length > 1 ? t.cf.delManyTitle : t.cf.delTitle}
-        text={t.cf.delText}
-        items={confirm?.map((id) => products.find((p) => p.id === id)?.name[lang] ?? id)}
+        text={`${lang === "th" ? `จะลบสินค้า ${confirm?.length ?? 0} รายการ` : `${confirm?.length ?? 0} products will be deleted.`} ${t.cf.delText}`}
         okLabel={t.cf.delOk}
       />
       {catsOpen && (
@@ -425,5 +402,3 @@ export function ProductsList({ products, categories, users, initialQ, canEdit, c
   );
 }
 
-const pagerBtn =
-  "grid size-[42px] cursor-pointer place-items-center rounded-lg border border-line bg-surface text-ink disabled:cursor-not-allowed disabled:opacity-40";

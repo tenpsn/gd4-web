@@ -1,3 +1,4 @@
+import { logActivity } from "@/server/activity";
 import { can, getCurrentUser } from "@/server/auth";
 import { saveUpload, type UploadKind } from "@/server/files";
 import { mutate, nowStr } from "@/server/store";
@@ -23,11 +24,13 @@ export async function POST(req: Request) {
   const saved = await saveUpload(file, kind);
   if ("error" in saved) return Response.json(saved, { status: 400 });
   // เก็บรูปไว้ในคลังสื่อเพื่อให้นำไปใช้ซ้ำได้
-  if (kind === "image") {
-    mutate((db) => {
+  await mutate((db) => {
+    if (kind === "image") {
       db.media.unshift({ ...saved, when: nowStr(), userId: user.id });
       db.media = db.media.slice(0, 1000);
-    });
-  }
+    }
+    const what = { image: { th: "รูป", en: "image" }, pdf: { th: " PDF", en: "PDF" }, font: { th: "ฟอนต์", en: "font" } }[kind];
+    logActivity(db, user.id, { th: `อัปโหลด${what.th}`, en: `uploaded ${what.en}` }, { th: saved.name, en: saved.name });
+  });
   return Response.json(saved);
 }

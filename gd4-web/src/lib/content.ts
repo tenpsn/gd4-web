@@ -1,6 +1,6 @@
 /**
  * ทุกหน้าของเว็บอ่านเนื้อหาผ่านฟังก์ชันชุดนี้เท่านั้น ซึ่งดึงข้อมูลชุดเดียวกับที่แอดมินแก้ไข
- * ทำเป็นแบบรอผลไว้ก่อน เพื่อตอนย้ายไปใช้ PostgreSQL จะได้ไม่ต้องแก้จุดที่เรียกใช้
+ * ข้อมูลอ่านจาก PostgreSQL ผ่าน readDb
  */
 import "server-only";
 import { readDb } from "@/server/store";
@@ -17,35 +17,35 @@ export function visible(page: Page): Page {
 }
 
 export async function getSettings(): Promise<SiteSettings> {
-  return readDb().settings;
+  return (await readDb()).settings;
 }
 
 export async function getDesign(): Promise<Design> {
-  return readDb().design;
+  return (await readDb()).design;
 }
 
 /** หาหน้าที่แอดมินเพิ่มไว้จากที่อยู่ของหน้า โดยใช้ฉบับที่เผยแพร่แล้ว */
 export async function getPageBySlug(slug: string): Promise<Page | undefined> {
-  const page = readDb().pages.find((p) => p.slug === slug);
+  const page = (await readDb()).pages.find((p) => p.slug === slug);
   return page ? visible(page) : undefined;
 }
 
 export async function getPage(id: string): Promise<Page | undefined> {
-  const page = readDb().pages.find((p) => p.id === id);
+  const page = (await readDb()).pages.find((p) => p.id === id);
   return page ? visible(page) : undefined;
 }
 
 export async function getCategories(): Promise<Category[]> {
-  return readDb().categories;
+  return (await readDb()).categories;
 }
 
 /** ดึงเฉพาะสินค้าที่เผยแพร่แล้ว */
 export async function getProducts(opts: { category?: string; limit?: number } = {}): Promise<Product[]> {
-  let list = readDb().products.filter((p) => p.status === "pub");
+  let list = (await readDb()).products.filter((p) => p.status === "pub");
   if (opts.category && opts.category !== "all") list = list.filter((p) => p.category === opts.category);
   return opts.limit ? list.slice(0, opts.limit) : list;
 }
 
 export async function getProduct(sku: string): Promise<Product | undefined> {
-  return readDb().products.find((p) => p.status === "pub" && p.sku.toLowerCase() === sku.toLowerCase());
+  return (await readDb()).products.find((p) => p.status === "pub" && p.sku.toLowerCase() === sku.toLowerCase());
 }

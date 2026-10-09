@@ -1,16 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import { SocialGlyph, SOCIALS } from "@/components/SocialIcon";
 import type { GlobalContent } from "@/server/types";
-import type { LText, Locale, MenuItem, SocialPlatform } from "@/types/site";
+import type { Img, LText, Locale, MenuItem, SocialPlatform } from "@/types/site";
 import { AIcon, type AIconName } from "../AIcon";
 import { useAdmin } from "../context";
 import { btn } from "../ui";
 
-const PLAT: Record<SocialPlatform, [string, string, string]> = {
-  facebook: ["Facebook", "f", "#1877f2"], line: ["LINE", "L", "#06c755"], youtube: ["YouTube", "▶", "#e62117"], instagram: ["Instagram", "IG", "#d6249f"],
-  tiktok: ["TikTok", "TT", "#161823"], x: ["X", "X", "#161823"], linkedin: ["LinkedIn", "in", "#0a66c2"],
-};
+/** ลำดับแพลตฟอร์มที่ให้เลือก */
+const PLAT_ORDER: SocialPlatform[] = ["facebook", "line", "youtube", "instagram", "tiktok", "x", "linkedin", "custom"];
 
 let seq = 0;
 const uid = (p: string) => `${p}${Date.now().toString(36)}${(++seq).toString(36)}`;
@@ -38,7 +37,13 @@ function Card({ icon, title, sub, children }: { icon: AIconName; title: string; 
   );
 }
 
-export function GlobalEditor({ g, lang, onChange, canEdit }: { g: GlobalContent; lang: Locale; onChange: (g: GlobalContent) => void; canEdit: boolean }) {
+export function GlobalEditor({ g, lang, onChange, canEdit, onPickMedia }: {
+  g: GlobalContent;
+  lang: Locale;
+  onChange: (g: GlobalContent) => void;
+  canEdit: boolean;
+  onPickMedia: (current: Img, apply: (src: string) => void) => void;
+}) {
   const { lang: ui, t } = useAdmin();
   const setLabel = (l: LText, v: string): LText => ({ ...l, [lang]: v });
   const setMenu = (menu: MenuItem[]) => onChange({ ...g, menu });
@@ -49,6 +54,7 @@ export function GlobalEditor({ g, lang, onChange, canEdit }: { g: GlobalContent;
     n.splice(b, 0, x);
     return n;
   };
+  const customLabel = ui === "th" ? "ช่องทางอื่น ใส่โลโก้เอง" : "Other, with your own logo";
   const tag = <span className="rounded bg-soft px-[5px] py-px font-mono text-[10.5px] font-semibold text-blue">{lang.toUpperCase()}</span>;
 
   return (
@@ -121,23 +127,47 @@ export function GlobalEditor({ g, lang, onChange, canEdit }: { g: GlobalContent;
         {g.socials.map((so, i) => (
           <div key={so.id} className="flex flex-wrap items-center gap-2 rounded-[10px] border border-line bg-surface2 p-2.5">
             <div className="flex flex-wrap gap-1" role="radiogroup" aria-label={ui === "th" ? "แพลตฟอร์ม" : "Platform"}>
-              {(Object.keys(PLAT) as SocialPlatform[]).map((p) => (
+              {PLAT_ORDER.map((p) => (
                 <button
                   key={p}
                   type="button"
                   role="radio"
                   aria-checked={so.platform === p}
-                  title={PLAT[p][0]}
-                  aria-label={PLAT[p][0]}
+                  title={p === "custom" ? customLabel : SOCIALS[p].name}
+                  aria-label={p === "custom" ? customLabel : SOCIALS[p].name}
                   onClick={() => onChange({ ...g, socials: g.socials.map((x, j) => (j === i ? { ...x, platform: p } : x)) })}
-                  className={`grid size-9 cursor-pointer place-items-center rounded-full border-2 text-[11px] font-bold text-white ${so.platform === p ? "border-blue-solid" : "border-transparent opacity-50"}`}
-                  style={{ background: PLAT[p][2] }}
+                  className={`grid size-9 cursor-pointer place-items-center overflow-hidden rounded-full border-2 text-[11px] font-bold text-white ${so.platform === p ? "border-blue-solid" : "border-transparent opacity-50"}`}
+                  style={{ background: p === "custom" && so.icon ? "#fff" : SOCIALS[p].bg }}
                 >
-                  {PLAT[p][1]}
+                  <SocialGlyph social={p === "custom" ? { platform: p, icon: so.icon } : { platform: p }} size={16} />
                 </button>
               ))}
             </div>
             <input value={so.url} onChange={(e) => onChange({ ...g, socials: g.socials.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)) })} placeholder="https://" aria-label="URL" className={`${inp} min-h-10 flex-[1_1_200px] w-auto font-mono text-[13px]`} />
+            {so.platform === "custom" && (
+              <div className="flex w-full flex-wrap items-center gap-2">
+                <input
+                  value={so.name ?? ""}
+                  onChange={(e) => onChange({ ...g, socials: g.socials.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)) })}
+                  placeholder={ui === "th" ? "ชื่อช่องทาง เช่น Shopee" : "Channel name, e.g. Shopee"}
+                  aria-label={ui === "th" ? "ชื่อช่องทาง" : "Channel name"}
+                  className={`${inp} min-h-10 flex-[1_1_160px] w-auto text-[14px]`}
+                />
+                <button
+                  type="button"
+                  onClick={() => onPickMedia(so.icon ?? null, (src) => onChange({ ...g, socials: g.socials.map((x, j) => (j === i ? { ...x, icon: src } : x)) }))}
+                  className={`${btn.outline} min-h-10 text-sm`}
+                >
+                  <AIcon name="image" />
+                  {so.icon ? (ui === "th" ? "เปลี่ยนโลโก้" : "Change logo") : ui === "th" ? "เลือกโลโก้" : "Choose logo"}
+                </button>
+                {so.icon && (
+                  <button type="button" onClick={() => onChange({ ...g, socials: g.socials.map((x, j) => (j === i ? { ...x, icon: null } : x)) })} className="min-h-10 cursor-pointer border-0 bg-transparent px-2 text-sm text-red">
+                    {ui === "th" ? "ลบโลโก้" : "Remove logo"}
+                  </button>
+                )}
+              </div>
+            )}
             <button type="button" onClick={() => onChange({ ...g, socials: g.socials.filter((_, j) => j !== i) })} aria-label={t.c.del} className={`${iconBtn} hover:bg-red-soft hover:text-red`}>
               <AIcon name="trash" />
             </button>

@@ -11,6 +11,8 @@ type Dev = "d" | "t" | "m";
 const SIZES: SizeKey[] = ["h1", "h2", "h3", "body", "btn", "menu"];
 const COLORS: ColorKey[] = ["primary", "accent", "bg", "bg2", "heading", "text", "muted"];
 const RADII = [0, 4, 8, 12, 20];
+/** มุมโค้งของปุ่มและช่องกรอก 999 คือทรงแคปซูล */
+const BTN_RADII = [0, 4, 8, 12, 999];
 const SPACING: [number, "sp_c" | "sp_n" | "sp_r", string][] = [
   [0.75, "sp_c", "6px"],
   [1, "sp_n", "10px"],
@@ -254,7 +256,7 @@ export function DesignPanel({ d, onChange, dev, setDev, scheme, setScheme, canEd
       <section className={card}>
         <div className="flex items-center gap-2.5">
           <strong className="flex-1 text-[15.5px]">{t.dz.shape}</strong>
-          <button type="button" onClick={() => set((x) => Object.assign(x, { radius: D.radius, spacing: D.spacing }))} className={resetBtn}>
+          <button type="button" onClick={() => set((x) => Object.assign(x, { radius: D.radius, btnRadius: D.btnRadius, imgRadius: D.imgRadius, inputRadius: D.inputRadius, spacing: D.spacing }))} className={resetBtn}>
             {t.dz.resetOne}
           </button>
         </div>
@@ -265,6 +267,43 @@ export function DesignPanel({ d, onChange, dev, setDev, scheme, setScheme, canEd
               <button key={r} type="button" role="radio" aria-checked={d.radius === r} onClick={() => set((x) => void (x.radius = r))} className={`flex cursor-pointer flex-col items-center gap-1.5 rounded-lg border-[1.5px] px-1 py-2.5 text-xs font-semibold ${pick(d.radius === r)}`}>
                 <span className="h-[22px] w-[30px] border-2 border-b-0 border-current" style={{ borderRadius: `${r}px ${r}px 0 0` }} />
                 {r} px
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex flex-col gap-2">
+          <span className="text-[13px] font-semibold text-ink2">{t.dz.btnRadius}</span>
+          <div className="grid grid-cols-5 gap-1.5" role="radiogroup" aria-label={t.dz.btnRadius}>
+            {BTN_RADII.map((r) => (
+              <button key={r} type="button" role="radio" aria-checked={d.btnRadius === r} onClick={() => set((x) => void (x.btnRadius = r))} className={`flex cursor-pointer flex-col items-center gap-1.5 rounded-lg border-[1.5px] px-1 py-2.5 text-xs font-semibold ${pick(d.btnRadius === r)}`}>
+                <span className="h-[18px] w-[36px] border-2 border-current" style={{ borderRadius: `${Math.min(r, 9)}px` }} />
+                {r === 999 ? t.dz.pill : `${r} px`}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex flex-col gap-2">
+          <span className="text-[13px] font-semibold text-ink2">{t.dz.imgRadius}</span>
+          <div className="grid grid-cols-5 gap-1.5" role="radiogroup" aria-label={t.dz.imgRadius}>
+            {RADII.map((r) => (
+              <button key={r} type="button" role="radio" aria-checked={d.imgRadius === r} onClick={() => set((x) => void (x.imgRadius = r))} className={`flex cursor-pointer flex-col items-center gap-1.5 rounded-lg border-[1.5px] px-1 py-2.5 text-xs font-semibold ${pick(d.imgRadius === r)}`}>
+                <span className="grid h-[22px] w-[30px] place-items-center border-2 border-current" style={{ borderRadius: `${r}px` }}>
+                  <AIcon name="image" size={12} />
+                </span>
+                {r} px
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex flex-col gap-2">
+          <span className="text-[13px] font-semibold text-ink2">{t.dz.inputRadius}</span>
+          <div className="grid grid-cols-5 gap-1.5" role="radiogroup" aria-label={t.dz.inputRadius}>
+            {BTN_RADII.map((r) => (
+              <button key={r} type="button" role="radio" aria-checked={d.inputRadius === r} onClick={() => set((x) => void (x.inputRadius = r))} className={`flex cursor-pointer flex-col items-center gap-1.5 rounded-lg border-[1.5px] px-1 py-2.5 text-xs font-semibold ${pick(d.inputRadius === r)}`}>
+                <span className="flex h-[18px] w-[40px] items-center border-2 border-current pl-1" style={{ borderRadius: `${Math.min(r, 9)}px` }}>
+                  <span className="h-2.5 w-px bg-current" />
+                </span>
+                {r === 999 ? t.dz.pill : `${r} px`}
               </button>
             ))}
           </div>

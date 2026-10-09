@@ -34,6 +34,7 @@ export type IconName =
   | "pin"
   | "mail"
   | "arrowR"
+  | "arrowU"
   | "image"
   | "alert"
   | "plus"
@@ -58,7 +59,7 @@ type Item<T> = T & { id: string; hidden?: boolean };
 export type HeroSection = Base<"hero"> & {
   /** จำนวนวินาทีก่อนเปลี่ยนสไลด์ */
   autoplay: number;
-  items: Item<{ title: LText; sub: LText; img: Img; imgAlt: LText; btnLabel: LText; btnUrl: string }>[];
+  items: Item<{ title: LText; sub: LText; img: Img; btnLabel: LText; btnUrl: string }>[];
 };
 
 export type PageHeaderSection = Base<"pageHeader"> & {
@@ -72,7 +73,6 @@ export type TextImageSection = Base<"textImage"> & {
   heading: LText;
   body: LText;
   img: Img;
-  imgAlt: LText;
   imgSide: "left" | "right";
   btnLabel: LText;
   btnUrl: string;
@@ -191,7 +191,8 @@ export type MenuItem = {
   children?: { id: string; label: LText; url: string }[];
 };
 
-export type SocialPlatform = "facebook" | "line" | "youtube" | "instagram" | "linkedin" | "tiktok" | "x";
+/** custom คือช่องทางอื่นที่แอดมินตั้งชื่อและอัปโหลดโลโก้เอง */
+export type SocialPlatform = "facebook" | "line" | "youtube" | "instagram" | "linkedin" | "tiktok" | "x" | "custom";
 
 export type SiteLanguage = { code: string; name: string; on: boolean; def?: boolean; fixed?: boolean };
 
@@ -203,17 +204,16 @@ export type SiteSettings = {
   favicon: Img;
   seo: { title: LText; description: LText; image?: Img };
   languages: SiteLanguage[];
-  autoBackup: boolean;
   contact: {
     address: LText;
     phone: string;
     email: string;
     hours: LText;
-    lat: number;
-    lng: number;
+    /** ลิงก์จากโค้ดฝังแผนที่ของ Google Maps เป็นค่าว่างถ้ายังไม่ได้ใส่ */
+    mapEmbed: string;
   };
   menu: MenuItem[];
-  socials: { id: string; platform: SocialPlatform; url: string }[];
+  socials: { id: string; platform: SocialPlatform; url: string; name?: string; icon?: Img }[];
   footer: { body: LText; copyright: LText };
 };
 
@@ -256,8 +256,14 @@ export type Design = {
   /** ระยะห่างระหว่างตัวอักษร */
   ls: { heading: number; body: number };
   colors: { light: Record<ColorKey, string>; dark: Record<ColorKey, string> };
-  /** ความโค้งของมุมเป็นพิกเซล */
+  /** ความโค้งของมุมการ์ดและกล่องเป็นพิกเซล */
   radius: number;
+  /** ความโค้งของมุมปุ่มเป็นพิกเซล 999 คือปุ่มทรงแคปซูล */
+  btnRadius: number;
+  /** ความโค้งของมุมรูปภาพเป็นพิกเซล */
+  imgRadius: number;
+  /** ความโค้งของมุมช่องค้นหาและช่องกรอกเป็นพิกเซล 999 คือทรงแคปซูล */
+  inputRadius: number;
   /** ตัวคูณระยะห่างระหว่างส่วน 0.75 คือแน่น 1 คือปกติ 1.3 คือโปร่ง */
   spacing: number;
 };

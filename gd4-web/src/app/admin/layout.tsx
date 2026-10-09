@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Mono, IBM_Plex_Sans, IBM_Plex_Sans_Thai } from "next/font/google";
+import { getBrand } from "@/admin/brand.server";
+import { getSettings } from "@/lib/content";
 import { AdminLangProvider } from "@/admin/context";
 import { getAdminLang } from "@/admin/server";
 import { ThemeSync } from "@/components/layout/theme";
@@ -10,10 +12,15 @@ const plexThai = IBM_Plex_Sans_Thai({ weight: ["400", "500", "600", "700"], subs
 const plex = IBM_Plex_Sans({ weight: ["400", "500", "600", "700"], subsets: ["latin"], variable: "--font-plex", display: "swap" });
 const plexMono = IBM_Plex_Mono({ weight: ["500"], subsets: ["latin"], variable: "--font-plex-mono", display: "swap" });
 
-export const metadata: Metadata = {
-  title: { default: "GD4 Medical Admin", template: "%s · GD4 Admin" },
-  robots: { index: false, follow: false },
-};
+/** ชื่อและไอคอนบนแท็บเบราว์เซอร์ ใช้ชื่อเว็บและ favicon จากหน้าตั้งค่า เหมือนหน้าเว็บ */
+export async function generateMetadata(): Promise<Metadata> {
+  const [{ name }, s] = await Promise.all([getBrand(), getSettings()]);
+  return {
+    title: { default: `${name} Admin`, template: `%s · ${name} Admin` },
+    robots: { index: false, follow: false },
+    ...(s.favicon && s.favicon !== "placeholder" ? { icons: { icon: s.favicon } } : {}),
+  };
+}
 
 /** โครงหน้าหลักของหลังบ้าน แยกสี ภาษา และธีมเป็นของตัวเอง และไม่มีหัวกับท้ายเว็บ */
 export default async function AdminRootLayout({ children }: LayoutProps<"/admin">) {

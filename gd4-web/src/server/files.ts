@@ -1,13 +1,12 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { ensureSchema, pool } from "./db";
 
 /**
- * ที่เก็บไฟล์ชั่วคราว ไฟล์อัปโหลดเก็บในโฟลเดอร์ data uploads และเปิดผ่านเส้นทาง media
- * ภายหลังจะย้ายไป S3 หรือ Supabase Storage โดยโค้ดที่เรียกใช้เห็นแค่ลิงก์ src เหมือนเดิม
+ * ไฟล์อัปโหลดเก็บในตาราง uploads ของฐานข้อมูล และเปิดผ่านเส้นทาง media
+ * ถ้าภายหลังย้ายไป S3 โค้ดที่เรียกใช้ยังเห็นแค่ลิงก์ src เหมือนเดิม
  */
-const DIR = path.join(process.cwd(), ".data", "uploads");
 
 export type UploadKind = "image" | "pdf" | "font";
 
@@ -41,23 +40,26 @@ export async function saveUpload(file: File, kind: UploadKind): Promise<Saved | 
   const type = sniff(buf);
   const ext = type ? rule.types[type] : undefined;
   if (!ext) return { error: "type" };
-  mkdirSync(DIR, { recursive: true });
   const stored = `${randomUUID()}.${ext}`;
-  writeFileSync(path.join(DIR, stored), buf);
+  await ensureSchema();
+  await pool().query("insert into uploads (name, type, size, body) values ($1, $2, $3, $4)", [stored, type, buf.length, buf]);
   // เก็บชื่อไฟล์เดิมไว้แสดงผล โดยตัดส่วนที่เป็นที่อยู่โฟลเดอร์ออก
   const name = path.basename(file.name).replace(/[^\w.\-ก-๙ ]+/g, "_").slice(0, 120) || stored;
   return { src: `/media/${stored}`, name, size: file.size };
 }
 
-const MIME: Record<string, string> = {
+export const MIME: Record<string, string> = {
   jpg: "image/jpeg", png: "image/png", webp: "image/webp", pdf: "application/pdf",
   woff2: "font/woff2", woff: "font/woff", ttf: "font/ttf", otf: "font/otf",
 };
 
+/** รูปแบบชื่อไฟล์ที่ระบบตั้งให้ */
+export const UPLOAD_NAME = /^[0-9a-f-]{36}\.(jpg|png|webp|pdf|woff2|woff|ttf|otf)$/;
+
 /** อ่านไฟล์ที่อัปโหลดไว้จากชื่อที่ระบบตั้งให้ ถ้าไม่พบหรือชื่อไม่ถูกรูปแบบจะได้ null */
-export function readUpload(name: string): { body: Buffer; type: string; size: number } | null {
-  if (!/^[0-9a-f-]{36}\.(jpg|png|webp|pdf|woff2|woff|ttf|otf)$/.test(name)) return null;
-  const file = path.join(DIR, name);
-  if (!existsSync(file)) return null;
-  return { body: readFileSync(file), type: MIME[name.split(".").pop()!], size: statSync(file).size };
+export async function readUpload(name: string): Promise<{ body: Buffer; type: string; size: number } | null> {
+  if (!UPLOAD_NAME.test(name)) return null;
+  await ensureSchema();
+  const { rows } = await pool().query<{ body: Buffer; type: string; size: number }>("select body, type, size from uploads where name = $1", [name]);
+  return rows[0] ?? null;
 }

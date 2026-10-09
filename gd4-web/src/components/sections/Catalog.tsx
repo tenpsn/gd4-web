@@ -83,7 +83,7 @@ function CatalogView({ heading, products, categories, initialCat, initialQ }: {
             value={q}
             onChange={(e) => update(cat, e.target.value)}
             placeholder={t.p.search}
-            className="min-h-[50px] w-full rounded-ctl border border-line bg-card pl-11 pr-4 text-body text-ink outline-none focus:border-primary-solid focus:shadow-[0_0_0_3px_var(--c-soft)]"
+            className="min-h-[50px] w-full rounded-input border border-line bg-card pl-11 pr-4 text-body text-ink outline-none focus:border-primary-solid focus:shadow-[0_0_0_3px_var(--c-soft)]"
           />
         </label>
         <div className="flex gap-2 overflow-x-auto pb-1" role="group" aria-label={t.p.category}>
@@ -130,7 +130,7 @@ function CatalogView({ heading, products, categories, initialCat, initialQ }: {
           <button
             type="button"
             onClick={() => update("all", "")}
-            className="min-h-11 cursor-pointer rounded-ctl border border-line bg-transparent px-[18px] text-btn font-semibold text-ink"
+            className="min-h-11 cursor-pointer rounded-btn border border-line bg-transparent px-[18px] text-btn font-semibold text-ink"
           >
             {t.p.clear}
           </button>

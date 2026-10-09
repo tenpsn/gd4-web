@@ -20,6 +20,9 @@ export const DEFAULT_DESIGN: Design = {
     dark: { primary: "#2a5fb8", accent: "#d43a2f", bg: "#0b111b", bg2: "#111a2a", heading: "#e8edf5", text: "#e8edf5", muted: "#a7b3c6" },
   },
   radius: 12,
+  btnRadius: 8,
+  imgRadius: 12,
+  inputRadius: 8,
   spacing: 1,
 };
 

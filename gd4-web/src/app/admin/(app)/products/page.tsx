@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "Products" };
 
 export default async function ProductsPage({ searchParams }: PageProps<"/admin/products">) {
   const user = await requireUser("products");
-  const db = readDb();
+  const db = await readDb();
   const sp = await searchParams;
   const users = Object.fromEntries(db.users.map((u) => [u.id, u.name]));
   return (

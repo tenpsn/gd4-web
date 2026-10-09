@@ -26,7 +26,7 @@ export function NotFoundView() {
             name="q"
             aria-label={t.p.search}
             placeholder={t.p.search}
-            className="min-h-[50px] w-full rounded-ctl border border-line bg-card pl-11 pr-4 text-body text-ink outline-none focus:border-primary-solid"
+            className="min-h-[50px] w-full rounded-input border border-line bg-card pl-11 pr-4 text-body text-ink outline-none focus:border-primary-solid"
           />
         </form>
         <div className="flex flex-wrap justify-center gap-3">

@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "New product" };
 
 export default async function NewProductPage() {
   const user = await requireUser("products", "edit");
-  const db = readDb();
+  const db = await readDb();
   return (
     <ProductForm
       initial={toInput(null)}

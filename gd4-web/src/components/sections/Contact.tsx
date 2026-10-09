@@ -13,7 +13,6 @@ export function Contact({ s, lang, settings }: { s: ContactSection; lang: Locale
     ["mail", t.c.email, <a key="e" href={`mailto:${c.email}`} className="text-ink hover:text-primary">{c.email}</a>],
     ["clock", t.c.hours, tx(c.hours, lang)],
   ];
-  const map = `https://www.google.com/maps/search/?api=1&query=${c.lat},${c.lng}`;
 
   return (
     <div className="sec grid grid-cols-1 items-start gap-7 lg:grid-cols-[minmax(0,.9fr)_minmax(0,1.1fr)]">
@@ -29,22 +28,30 @@ export function Contact({ s, lang, settings }: { s: ContactSection; lang: Locale
             </span>
           </div>
         ))}
-        {/* ภาพแผนที่ตัวอย่างตามดีไซน์ คลิกแล้วเปิด Google Maps ที่พิกัดที่บันทึกไว้ */}
-        <a
-          href={map}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label={t.openMap}
-          className="grid h-[220px] place-items-center rounded-card"
-          style={{
-            background:
-              "repeating-linear-gradient(0deg,var(--c-ph1) 0 1px,transparent 1px 36px),repeating-linear-gradient(90deg,var(--c-ph1) 0 1px,var(--c-ph2) 1px 36px)",
-          }}
-        >
-          <span className="grid size-12 place-items-center rounded-full bg-accent-solid text-white shadow-[0_8px_20px_rgba(200,49,42,.35)]">
-            <Icon name="pin" />
-          </span>
-        </a>
+        {c.mapEmbed ? (
+          // แผนที่จากโค้ดฝังแผนที่ของ Google Maps มีการ์ดชื่อบริษัทและลิงก์ดูแผนที่ขนาดใหญ่ในตัว
+          <iframe
+            src={c.mapEmbed}
+            title={t.openMap}
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+            className="block h-[260px] w-full rounded-card border border-line bg-soft"
+          />
+        ) : (
+          // ยังไม่ได้ใส่โค้ดฝังแผนที่ แสดงภาพแผนที่ตัวอย่างตามดีไซน์
+          <div
+            aria-hidden="true"
+            className="grid h-[220px] place-items-center rounded-card"
+            style={{
+              background:
+                "repeating-linear-gradient(0deg,var(--c-ph1) 0 1px,transparent 1px 36px),repeating-linear-gradient(90deg,var(--c-ph1) 0 1px,var(--c-ph2) 1px 36px)",
+            }}
+          >
+            <span className="grid size-12 place-items-center rounded-full bg-accent-solid text-white shadow-[0_8px_20px_rgba(200,49,42,.35)]">
+              <Icon name="pin" />
+            </span>
+          </div>
+        )}
       </div>
       <div className="rounded-card border border-line bg-card p-[clamp(20px,3vw,32px)] text-ink">
         <ContactForm heading={tx(s.heading, lang)} />

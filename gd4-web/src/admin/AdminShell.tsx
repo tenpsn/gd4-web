@@ -5,10 +5,12 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { logout } from "@/app/admin/actions/auth";
 import type { Area, PublicUser } from "@/server/types";
+import { type BrandInfo, BrandMark } from "./Brand";
 import { AIcon, type AIconName } from "./AIcon";
 import { avatarColor } from "./avatar";
 import { useAdmin } from "./context";
 import { AdminLangSwitch, AdminThemeToggle } from "./controls";
+import { LiveRefresh } from "./LiveRefresh";
 import { Confirm, isDirty, PUBBAR_SLOT, ToastProvider } from "./ui";
 
 const NAV: { area: Area; href: string; icon: AIconName }[] = [
@@ -43,11 +45,14 @@ const setCollapsedPref = (v: boolean) => {
   listeners.forEach((l) => l());
 };
 
-export function AdminShell({ user, areas, newMessages, children }: {
+export function AdminShell({ user, areas, newMessages, latestMessage, brand, children }: {
   user: PublicUser;
+  brand: BrandInfo;
   /** ส่วนที่ผู้ใช้คนนี้มีสิทธิ์เข้าดู */
   areas: Area[];
   newMessages: number;
+  /** รหัสข้อความล่าสุดตอนโหลดหน้า ใช้นับข้อความที่เข้ามาใหม่ */
+  latestMessage: number;
   children: React.ReactNode;
 }) {
   const { lang, t } = useAdmin();
@@ -73,6 +78,14 @@ export function AdminShell({ user, areas, newMessages, children }: {
     return () => document.removeEventListener("click", onClick, true);
   }, []);
 
+  // ตัวเลขข้อความที่ยังไม่อ่าน อัปเดตได้ทั้งจากการโหลดหน้าใหม่และจากการเช็คเป็นระยะ
+  const [unread, setUnread] = useState(newMessages);
+  const [lastNew, setLastNew] = useState(newMessages);
+  if (newMessages !== lastNew) {
+    setLastNew(newMessages);
+    setUnread(newMessages);
+  }
+
   // ปิดเมนูสไลด์เมื่อเปลี่ยนหน้า
   const [lastPath, setLastPath] = useState(path);
   if (path !== lastPath) {
@@ -95,6 +108,7 @@ export function AdminShell({ user, areas, newMessages, children }: {
 
   return (
     <ToastProvider>
+    <LiveRefresh latest={latestMessage} inbox={areas.includes("inbox")} onUnread={setUnread} />
     <div className="relative flex h-dvh">
       {drawer && <div onClick={() => setDrawer(false)} className="absolute inset-0 z-[39] bg-[var(--overlay)] [animation:a-fade_.3s_both] md2:hidden" />}
 
@@ -104,12 +118,9 @@ export function AdminShell({ user, areas, newMessages, children }: {
         } ${drawer ? "translate-x-0 shadow-[0_20px_60px_rgba(0,0,0,.45)]" : "-translate-x-[105%]"}`}
       >
         <div className="flex h-16 flex-none items-center gap-3 border-b border-white/[.08] px-4">
-          <span className="relative grid size-11 flex-none place-items-center rounded-lg bg-[#2a5fb8] text-[15px] font-bold text-white">
-            GD4
-            <span className="absolute -right-[3px] -top-[3px] size-2.5 rounded-full border-2 border-side bg-brand-red" />
-          </span>
+          <BrandMark brand={brand} onDark />
           <span className={`flex min-w-0 flex-1 flex-col whitespace-nowrap leading-[1.2] md2:hidden ${collapsed ? "" : "xl2:flex"}`}>
-            <strong className="text-base text-white">GD4 Medical</strong>
+            <strong className="overflow-hidden text-ellipsis text-base text-white">{brand.name}</strong>
             <span className="text-[12.5px] text-side-ink2">{t.nav.admin}</span>
           </span>
           <button
@@ -142,13 +153,13 @@ export function AdminShell({ user, areas, newMessages, children }: {
                 />
                 <AIcon name={n.icon} size={20} />
                 <span className={`flex-1 overflow-hidden text-ellipsis whitespace-nowrap ${labelCls}`}>{label}</span>
-                {n.area === "inbox" && newMessages > 0 && (
+                {n.area === "inbox" && unread > 0 && (
                   <span
                     className={`grid h-5 min-w-5 place-items-center rounded-[10px] bg-brand-red px-1.5 text-xs font-bold text-white md2:absolute md2:right-2 md2:top-[5px] ${
                       collapsed ? "" : "xl2:static"
                     }`}
                   >
-                    {newMessages}
+                    {unread}
                   </span>
                 )}
               </Link>
@@ -192,7 +203,10 @@ export function AdminShell({ user, areas, newMessages, children }: {
           >
             <AIcon name="menu" />
           </button>
-          <span className="grid size-9 place-items-center rounded-lg bg-blue-solid text-[12.5px] font-bold text-white md2:hidden">GD4</span>
+          {/* แถบด้านบนบนมือถือ แสดงโลโก้ถ้ามี ถ้ายังไม่มีโลโก้ไม่ต้องแสดง */}
+          <span className="contents md2:hidden">
+            <BrandMark brand={brand} size="size-9" />
+          </span>
           {areas.includes("products") && (
             <form
               role="search"

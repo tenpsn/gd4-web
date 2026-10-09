@@ -6,22 +6,44 @@ const L = (th: string, en: string): LText => ({ th, en });
 
 /** ข้อความที่เพิ่มหรือแก้ทับจากข้อความในไฟล์ดีไซน์ */
 const EXTRA = {
-  nav: { design: L("ธีมและตัวอักษร", "Theme & type"), viewSite: L("ดูหน้าเว็บไซต์", "View website") },
+  nav: { design: L("ธีมและตัวอักษร", "Theme & type"), activity: L("ประวัติการแก้ไข", "Activity log"), viewSite: L("ดูหน้าเว็บไซต์", "View website") },
   top: { language: L("ภาษา", "Language") },
   login: {
     errCred: L("อีเมลหรือรหัสผ่านไม่ถูกต้อง", "Incorrect email or password"),
-    sentText: L("ถ้ามีบัญชีนี้ในระบบ เราได้ส่งลิงก์ตั้งรหัสผ่านใหม่ไปที่", "If an account exists, we sent a password reset link to"),
-    demo: L("โหมดทดสอบ: รหัสผ่านอยู่ในไฟล์ .env.example ของโปรเจกต์", "Test mode: the password is in the project's .env.example"),
     showPw: L("แสดงรหัสผ่าน", "Show password"), hidePw: L("ซ่อนรหัสผ่าน", "Hide password"),
   },
   dash: {
     hello: L("สวัสดี คุณ", "Hello, "), latest: L("ล่าสุด", "Latest"),
     denied: L("บัญชีของคุณไม่มีสิทธิ์เข้าส่วนนั้น", "Your account doesn't have access to that area"),
+    cMsgs: L("ข้อความที่ยังไม่ได้ตอบ", "Messages awaiting reply"),
+    unread: L("ยังไม่อ่าน", "Unread"), readNoReply: L("อ่านแล้ว", "Read"),
   },
   roles: {
     super: L("ผู้ดูแลสูงสุด", "Super admin"), editor: L("แก้ไขเนื้อหา", "Content editor"),
     products: L("จัดการสินค้า", "Product manager"), viewer: L("ดูอย่างเดียว", "View only"),
   },
+  set: { t_security: L("รหัสผ่าน", "Password") },
+  dz: {
+    radius: L("มุมโค้งการ์ดและกล่อง", "Card and box corners"),
+    btnRadius: L("มุมโค้งปุ่ม", "Button corners"),
+    imgRadius: L("มุมโค้งรูปภาพ", "Image corners"),
+    inputRadius: L("มุมโค้งช่องค้นหาและช่องกรอก", "Search and input corners"),
+    pill: L("แคปซูล", "Pill"),
+  },
+  pg: {
+    label: L("เปลี่ยนหน้า", "Pages"),
+    first: L("หน้าแรก", "First"), prev: L("ก่อนหน้า", "Previous"), next: L("ถัดไป", "Next"), last: L("หน้าสุดท้าย", "Last"),
+    showing: L("แสดง {from} ถึง {to} จาก {total} รายการ", "Showing {from} to {to} of {total}"),
+  },
+  users: {
+    added: L("เพิ่มผู้ดูแลแล้ว", "Admin added"), superOnly: L("เฉพาะผู้ดูแลสูงสุด", "Super admin only"), linkReady: L("สร้างลิงก์เชิญใหม่แล้ว", "New invite link created"),
+    linkTitle: L("ลิงก์เชิญ", "Invite link"),
+    linkText: L(
+      "คัดลอกลิงก์นี้ไปส่งให้ผู้ใช้ เพื่อให้ตั้งรหัสผ่านและเริ่มใช้งาน ลิงก์ใช้ได้ 7 วัน",
+      "Copy this link and send it to the user so they can set a password. It is valid for 7 days.",
+    ),
+  },
+  inbox: { consent: L("ยินยอมให้เก็บข้อมูลเมื่อ", "Consented to data use on"), colMsg: L("ข้อความ", "Message") },
   soon: { title: L("กำลังพัฒนา", "Coming soon"), text: L("หน้านี้จะเปิดใช้ในขั้นตอนถัดไปของการพัฒนา", "This screen is part of the next development phase.") },
 };
 

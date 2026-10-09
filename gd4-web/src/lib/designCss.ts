@@ -23,6 +23,9 @@ export function designCss(d: Design): string {
   };
   const root: Record<string, string> = bp("m");
   if (d.radius !== D.radius) Object.assign(root, { "--r": `${d.radius}px`, "--r-sm": `${Math.round((d.radius * 2) / 3)}px` });
+  if ((d.btnRadius ?? D.btnRadius) !== D.btnRadius) root["--r-btn"] = `${d.btnRadius}px`;
+  if ((d.imgRadius ?? D.imgRadius) !== D.imgRadius) root["--r-img"] = `${d.imgRadius}px`;
+  if ((d.inputRadius ?? D.inputRadius) !== D.inputRadius) root["--r-input"] = `${d.inputRadius}px`;
   if (d.fonts.heading !== D.fonts.heading) root["--f-head"] = fontStack(d.fonts.heading);
   if (d.fonts.body !== D.fonts.body) root["--f-body"] = fontStack(d.fonts.body);
 

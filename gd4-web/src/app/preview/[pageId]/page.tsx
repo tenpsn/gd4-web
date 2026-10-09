@@ -22,7 +22,7 @@ export default async function PreviewPage({ params, searchParams }: PageProps<"/
   const lang = sp.lang === "en" ? "en" : "th";
   const theme = sp.theme === "dark" ? "dark" : "light";
 
-  const db = readDb();
+  const db = await readDb();
   const w = working(db);
   const page = w.pages.find((p) => p.id === pageId) ?? w.pages.find((p) => p.id === "home");
   if (!page) notFound();

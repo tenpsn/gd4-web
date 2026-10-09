@@ -18,6 +18,7 @@ import type {
   TextSection,
   TimelineSection,
 } from "@/types/site";
+import { CountUp } from "./CountUp";
 import { btn, delay, H2, ink2 } from "./shared";
 
 type P<S> = { s: S; lang: Locale; dark: boolean };
@@ -67,8 +68,8 @@ export function TextImage({ s, lang, dark }: P<TextImageSection>) {
           </LocalLink>
         )}
       </div>
-      <div className={`relative aspect-[4/3] overflow-hidden rounded-card ${s.imgSide === "right" ? "order-0 lg:order-2" : "order-0"}`}>
-        <Media img={s.img} alt={tx(s.imgAlt, lang)} />
+      <div className={`relative aspect-[4/3] overflow-hidden rounded-img ${s.imgSide === "right" ? "order-0 lg:order-2" : "order-0"}`}>
+        <Media img={s.img} alt={tx(s.heading, lang)} />
       </div>
     </div>
   );
@@ -115,7 +116,7 @@ export function Stats({ s, lang }: P<StatsSection>) {
             className="anim-up flex h-full flex-col items-center justify-center gap-1.5 rounded-card bg-card px-3.5 py-6 text-center"
           >
             <span className="whitespace-nowrap font-head text-[calc(var(--fs-h2)*1.35)] font-bold leading-[1.1] text-primary tabular-nums">
-              {tx(c.value, lang)}
+              <CountUp value={tx(c.value, lang)} />
             </span>
             <span className="text-small leading-normal text-balance text-ink2">{tx(c.label, lang)}</span>
           </div>
@@ -128,13 +129,19 @@ export function Stats({ s, lang }: P<StatsSection>) {
 export function Logos({ s, lang }: P<LogosSection>) {
   const marquee = s.items.length >= 6;
   const box = "grid h-20 place-items-center rounded-card border border-line bg-card px-4 text-center text-[17px] font-bold text-ink2";
-  const logo = (x: LogosSection["items"][number]) =>
-    x.logo && x.logo !== "placeholder" ? (
-      // eslint-disable-next-line @next/next/no-img-element -- โลโก้แต่ละอันขนาดไม่เท่ากัน ต้องคงสัดส่วนเดิมของรูป
-      <img src={x.logo} alt={x.name} className="max-h-12 max-w-full object-contain" />
-    ) : (
-      x.name
+  // มีแค่รูปหรือแค่ชื่อ แสดงไว้ตรงกลาง ถ้ามีทั้งสองอย่าง วางรูปไว้หน้าชื่อ
+  const logo = (x: LogosSection["items"][number]) => {
+    const img = x.logo && x.logo !== "placeholder" ? x.logo : null;
+    const name = x.name.trim();
+    if (!img) return name;
+    return (
+      <span className="flex min-w-0 max-w-full items-center justify-center gap-2.5">
+        {/* eslint-disable-next-line @next/next/no-img-element -- โลโก้แต่ละอันขนาดไม่เท่ากัน ต้องคงสัดส่วนเดิมของรูป */}
+        <img src={img} alt={name ? "" : x.name} className={`${name ? "max-h-10 max-w-[45%]" : "max-h-12 max-w-full"} flex-none object-contain`} />
+        {name && <span className="clamp-2 min-w-0 text-left leading-tight [overflow-wrap:anywhere]">{name}</span>}
+      </span>
     );
+  };
   return (
     <div className="mx-auto flex max-w-[1200px] flex-col items-center gap-7 px-[var(--sec-px)] py-[calc(var(--sec-py)*.75)]">
       <H2 className="text-center text-[calc(var(--fs-h2)*.8)]">{tx(s.heading, lang)}</H2>
@@ -197,7 +204,7 @@ export function Gallery({ s, lang }: P<GallerySection>) {
       <div className={`grid gap-4 ${gridCols(s.items.length)} ${gridMax(s.items.length)}`}>
         {s.items.map((c, i) => (
           <figure key={c.id} style={delay(i)} className="anim-up m-0 flex min-w-0 flex-col gap-2.5">
-            <div className="relative aspect-[4/3] overflow-hidden rounded-card transition-transform duration-500 ease-[cubic-bezier(.2,.7,.2,1)] hover:scale-[1.02]">
+            <div className="relative aspect-[4/3] overflow-hidden rounded-img transition-transform duration-500 ease-[cubic-bezier(.2,.7,.2,1)] hover:scale-[1.02]">
               <Media img={c.img} alt={tx(c.caption, lang)} label={false} sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw" />
             </div>
             <figcaption className="clamp-2 text-small leading-normal text-ink2">{tx(c.caption, lang)}</figcaption>

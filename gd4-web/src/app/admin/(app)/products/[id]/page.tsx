@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: "Edit product" };
 export default async function EditProductPage({ params }: PageProps<"/admin/products/[id]">) {
   const user = await requireUser("products");
   const { id } = await params;
-  const db = readDb();
+  const db = await readDb();
   const p = db.products.find((x) => x.id === id);
   if (!p) notFound();
   const by = db.users.find((u) => u.id === p.updatedBy);

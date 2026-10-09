@@ -4,20 +4,26 @@ import { Media } from "@/components/Media";
 import { tx } from "@/i18n/config";
 import type { Dict } from "@/i18n/dictionary";
 import type { Locale, Product } from "@/types/site";
+import { CardImages } from "./CardImages";
 import { delay } from "./shared";
 
 export const productUrl = (p: Product) => `/products/${p.sku.toLowerCase()}`;
 
 export function ProductCard({ p, cat, lang, t, i }: { p: Product; cat: string; lang: Locale; t: Dict; i: number }) {
   const name = tx(p.name, lang);
+  // รูปที่มีไฟล์แล้วทั้งหมด ถ้ามีมากกว่าหนึ่งรูปจะเลื่อนดูในการ์ดได้
+  const pics = (p.images ?? []).filter((im) => im.src).map((im) => ({ id: im.id, src: im.src }));
+  const sizes = "(min-width: 1024px) 25vw, 50vw";
   return (
     <article
       style={delay(i)}
       className="anim-up group relative flex h-full min-w-0 flex-col overflow-hidden rounded-card border border-line bg-card text-ink transition-[transform,box-shadow] duration-300 ease-[cubic-bezier(.2,.7,.2,1)] hover:-translate-y-1 hover:shadow-card"
     >
-      <div className={`relative aspect-[4/3] ${p.img ? "" : "bg-bg2"}`}>
-        {p.img ? (
-          <Media img={p.img} alt={p.img === "placeholder" ? `${t.p.img} · ${p.sku}` : name} sizes="(min-width: 1024px) 25vw, 50vw" />
+      <div className={`relative m-2.5 mb-0 aspect-[4/3] overflow-hidden rounded-img ${p.img ? "" : "bg-bg2"}`}>
+        {pics.length > 1 ? (
+          <CardImages images={pics} start={Math.max(0, pics.findIndex((im) => im.src === p.img))} alt={name} sizes={sizes} />
+        ) : p.img ? (
+          <Media img={p.img} alt={p.img === "placeholder" ? `${t.p.img} · ${p.sku}` : name} sizes={sizes} />
         ) : (
           <span className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-ink3">
             <span className="grid size-[52px] place-items-center rounded-full border-[1.5px] border-dashed border-line">

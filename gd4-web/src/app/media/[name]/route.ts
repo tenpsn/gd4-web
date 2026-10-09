@@ -3,7 +3,7 @@ import { readUpload } from "@/server/files";
 /** ส่งไฟล์ที่อัปโหลดจากหลังบ้าน ซึ่งตอนนี้เก็บไว้ในเครื่องชั่วคราว */
 export async function GET(_req: Request, ctx: RouteContext<"/media/[name]">) {
   const { name } = await ctx.params;
-  const file = readUpload(name);
+  const file = await readUpload(name);
   if (!file) return new Response("Not found", { status: 404 });
   return new Response(new Uint8Array(file.body), {
     headers: {
