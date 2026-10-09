@@ -2,10 +2,11 @@
 
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
-import { validateProduct, type ProductErrors, type ProductInput } from "@/admin/productRules";
+import { IMG_MAX, validateProduct, type ProductErrors, type ProductInput } from "@/admin/productRules";
 import { same } from "@/lib/same";
 import { logActivity } from "@/server/activity";
 import { assertCan } from "@/server/auth";
+import { mutateAndPrune } from "@/server/cleanup";
 import { sanitizeHtml } from "@/server/sanitize";
 import { mutate, nowStr, readDb } from "@/server/store";
 import type { Category, LText, Product } from "@/types/site";
@@ -33,7 +34,7 @@ export async function saveProduct(input: ProductInput, status: "pub" | "draft"):
     name: ltext(input.name, 200),
     short: ltext(input.short, 400),
     detail: { th: sanitizeHtml(str(input.detail?.th, 20000)), en: sanitizeHtml(str(input.detail?.en, 20000)) },
-    images: (Array.isArray(input.images) ? input.images : []).slice(0, 20).map((i) => ({ id: str(i.id, 64), src: safeSrc(i.src), label: ltext(i.label, 120) })),
+    images: (Array.isArray(input.images) ? input.images : []).slice(0, IMG_MAX).map((i) => ({ id: str(i.id, 64), src: safeSrc(i.src), label: ltext(i.label, 120) })),
     mainId: input.mainId ? str(input.mainId, 64) : null,
     specs: (Array.isArray(input.specs) ? input.specs : []).slice(0, 50).map((s) => ({ id: str(s.id, 64), k: ltext(s.k, 120), v: str(s.v, 200) })),
     pdf: input.pdf && /^\/media\/[0-9a-f-]{36}\.pdf$/.test(input.pdf.src) ? { name: str(input.pdf.name, 120), size: Number(input.pdf.size) || 0, src: input.pdf.src } : null,
@@ -53,7 +54,8 @@ export async function saveProduct(input: ProductInput, status: "pub" | "draft"):
     updatedAt: nowStr(), updatedBy: user.id,
   };
 
-  await mutate((d) => {
+  // รูปเดิมที่ไม่อยู่ในคลังและไม่มีที่ไหนใช้แล้วจะถูกลบ ส่วน PDF ยังเก็บไว้ในคลังไฟล์
+  await mutateAndPrune((d) => {
     if (isNew) d.products.unshift(record);
     else d.products = d.products.map((p) => (p.id === id ? record : p));
     logActivity(d, user.id, isNew ? "added" : status === "pub" ? "published" : "edited", record.name);
@@ -65,7 +67,7 @@ export async function saveProduct(input: ProductInput, status: "pub" | "draft"):
 export async function deleteProducts(ids: string[]): Promise<{ ok: true; count: number }> {
   const user = await assertCan("products", "del");
   const set = new Set(ids.map((x) => String(x)));
-  const count = await mutate((d) => {
+  const count = await mutateAndPrune((d) => {
     const gone = d.products.filter((p) => set.has(p.id));
     d.products = d.products.filter((p) => !set.has(p.id));
     gone.forEach((p) => logActivity(d, user.id, "deleted", p.name));

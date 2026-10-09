@@ -9,6 +9,12 @@ const SCHEMA = `
 create table if not exists meta (key text primary key, value jsonb not null);
 ${LIST_TABLES.map((t) => `create table if not exists ${t} (id text primary key, pos integer not null, data jsonb not null);`).join("\n")}
 create table if not exists uploads (name text primary key, type text not null, size integer not null, body bytea not null, created_at timestamptz not null default now());
+-- รหัสจากเนื้อไฟล์ ใช้หาไฟล์ที่อัปโหลดซ้ำ
+alter table uploads add column if not exists hash text;
+update uploads set hash = encode(sha256(body), 'hex') where hash is null;
+create index if not exists uploads_hash on uploads (hash);
+-- ชื่อไฟล์เดิมตอนอัปโหลด ใช้แสดงในคลังไฟล์
+alter table uploads add column if not exists label text;
 `;
 
 // ใช้การเชื่อมต่อชุดเดิมต่อไปเมื่อโค้ดโหลดใหม่ระหว่างพัฒนา

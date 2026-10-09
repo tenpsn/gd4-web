@@ -5,6 +5,7 @@ import { alignMenu } from "@/lib/menu";
 import { same } from "@/lib/same";
 import { logActivity } from "@/server/activity";
 import { assertCan, can, getCurrentUser } from "@/server/auth";
+import { mutateAndPrune } from "@/server/cleanup";
 import { cleanDesign, cleanGlobal, cleanPage, globalOf, working } from "@/server/content";
 import { mutate, nowStr, readDb } from "@/server/store";
 import type { Working } from "@/server/types";
@@ -47,7 +48,8 @@ export async function saveDraft(input: Working, baseRev: number): Promise<SaveDr
 
 export async function discardDraft() {
   const me = await assertCan("content", "edit");
-  await mutate((d) => {
+  // ไฟล์ที่ใช้แค่ในฉบับร่าง เช่น ฟอนต์ที่อัปโหลดแล้วไม่ได้เผยแพร่ จะถูกลบไปพร้อมร่าง
+  await mutateAndPrune((d) => {
     if (d.draft) logActivity(d, me.id, { th: "ทิ้งฉบับร่าง", en: "discarded draft" }, { th: "ฉบับร่างทั้งหมด", en: "all drafts" });
     d.draft = null;
     d.draftRev++;
@@ -68,7 +70,8 @@ export async function publish(): Promise<{ ok: boolean; error?: "forbidden"; rev
     return { ok: false, error: "forbidden" };
   }
 
-  await mutate((d) => {
+  // ไฟล์ที่ฉบับเผยแพร่ใหม่ไม่ได้ใช้แล้ว เช่น ฟอนต์ที่ถูกเปลี่ยน จะถูกลบ ไม่ลบระหว่างบันทึกร่างเพราะยังกดเลิกทำได้
+  await mutateAndPrune((d) => {
     const draft = d.draft!;
     const { pages, menu } = alignMenu(draft.pages, draft.global.menu);
     const global = { ...draft.global, menu };

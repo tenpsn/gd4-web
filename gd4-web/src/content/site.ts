@@ -33,10 +33,6 @@ export const SETTINGS: SiteSettings = {
   logo: null,
   logoDark: null,
   favicon: null,
-  languages: [
-    { code: "th", name: "ไทย", on: true, def: true, fixed: true },
-    { code: "en", name: "English", on: true, fixed: true },
-  ],
   seo: {
     title: L("GD4 Medical · ผู้จัดจำหน่ายเครื่องมือแพทย์ครบวงจร", "GD4 Medical · End-to-end medical equipment distributor"),
     description: L(

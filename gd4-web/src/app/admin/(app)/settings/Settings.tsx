@@ -6,13 +6,13 @@ import { useRef, useState, useTransition } from "react";
 import { AIcon, type AIconName } from "@/admin/AIcon";
 import { useAdmin } from "@/admin/context";
 import { MediaPicker } from "@/admin/MediaPicker";
-import { btn, FieldError, label, pageTitle, Req, uploadFile, useToast } from "@/admin/ui";
-import type { Design, Img, Locale, Page, SiteLanguage, SiteSettings } from "@/types/site";
-import { changePassword, saveGeneral, saveLanguages, saveSeo, type PwErrors } from "../../actions/settings";
+import { btn, FieldError, label, pageTitle, Req, SITE_HOST, uploadFile, useToast } from "@/admin/ui";
+import type { Design, Img, Locale, Page, SiteSettings } from "@/types/site";
+import { changePassword, saveGeneral, saveSeo, type PwErrors } from "../../actions/settings";
 
-type Tab = "general" | "typo" | "theme" | "seo" | "lang" | "security";
+type Tab = "general" | "typo" | "theme" | "seo" | "security";
 const TABS: [Tab, AIconName][] = [
-  ["general", "gear"], ["typo", "text"], ["theme", "sun"], ["seo", "search"], ["lang", "globe"], ["security", "lock"],
+  ["general", "gear"], ["typo", "text"], ["theme", "sun"], ["seo", "search"], ["security", "lock"],
 ];
 
 type PageLite = Pick<Page, "id" | "title" | "slug" | "seo">;
@@ -54,7 +54,6 @@ export function Settings(props: {
         {tab === "typo" && <TypoSummary design={props.design} canDesign={props.canDesign} />}
         {tab === "theme" && <ThemeSummary design={props.design} canDesign={props.canDesign} />}
         {tab === "seo" && <Seo settings={props.settings} pages={props.pages} />}
-        {tab === "lang" && <Languages list={props.settings.languages} />}
         {tab === "security" && <Security />}
       </fieldset>
     </div>
@@ -84,15 +83,20 @@ function LangTabs({ value, onChange, errs }: { value: Locale; onChange: (l: Loca
 }
 
 /** อัปโหลดหรือลบรูปในหน้าตั้งค่า เช่น โลโก้และไอคอนเว็บ */
-function ImageSetting({ title, hint, value, onChange, preview }: { title: string; hint: string; value: Img; onChange: (v: Img) => void; preview: React.ReactNode }) {
+function ImageSetting({ title, hint, value, onChange, preview, keep, kind = "image" }: { title: string; hint: string; value: Img; onChange: (v: Img) => void; preview: React.ReactNode; keep: string[]; kind?: "image" | "icon" }) {
   const { t } = useAdmin();
   const toast = useToast();
   const input = useRef<HTMLInputElement>(null);
+  const [picker, setPicker] = useState(false);
   return (
     <section className="card flex flex-col gap-3 p-[18px]">
       <strong className="text-[15px]">{title}</strong>
       {preview}
       <div className="flex flex-wrap gap-2">
+        <button type="button" onClick={() => setPicker(true)} className={`${btn.outline} min-h-10 px-3.5 text-sm`}>
+          <AIcon name="image" />
+          {t.content.chooseMedia}
+        </button>
         <button type="button" onClick={() => input.current?.click()} className={`${btn.outline} min-h-10 px-3.5 text-sm`}>
           <AIcon name="upload" />
           {t.set.upload}
@@ -107,19 +111,20 @@ function ImageSetting({ title, hint, value, onChange, preview }: { title: string
       <input
         ref={input}
         type="file"
-        accept="image/png,image/jpeg,image/webp"
+        accept={kind === "icon" ? "image/png,image/jpeg,image/webp,image/x-icon,.ico" : "image/png,image/jpeg,image/webp"}
         hidden
         onChange={async (e) => {
           const f = e.target.files?.[0];
           e.target.value = "";
           if (!f) return;
-          const r = await uploadFile(f, "image");
+          const r = await uploadFile(f, kind);
           if ("src" in r) {
             onChange(r.src);
             toast("ok", t.toast.logo);
           } else toast("err", t.toast.imgOnly);
         }}
       />
+      <MediaPicker open={picker} kind={kind} current={value} keep={keep} onPick={(src) => onChange(src)} onClose={() => setPicker(false)} />
     </section>
   );
 }
@@ -147,6 +152,7 @@ function General({ settings }: { settings: SiteSettings }) {
   const toast = useToast();
   const init = { siteName: settings.siteName, logo: settings.logo, logoDark: settings.logoDark, favicon: settings.favicon };
   const [v, setV] = useState(init);
+  const keep = [v.logo, v.logoDark, v.favicon].filter((x): x is string => !!x);
   const [saved, setSaved] = useState(init);
   const [nl, setNl] = useState<Locale>(lang);
   const [err, setErr] = useState(false);
@@ -176,6 +182,7 @@ function General({ settings }: { settings: SiteSettings }) {
         <ImageSetting
           title={t.set.logoLight}
           hint={t.set.logoHint}
+          keep={keep}
           value={v.logo}
           onChange={(logo) => setV({ ...v, logo })}
           preview={
@@ -193,6 +200,7 @@ function General({ settings }: { settings: SiteSettings }) {
         <ImageSetting
           title={t.set.logoDark}
           hint={t.set.logoHint}
+          keep={keep}
           value={v.logoDark}
           onChange={(logoDark) => setV({ ...v, logoDark })}
           preview={
@@ -210,6 +218,8 @@ function General({ settings }: { settings: SiteSettings }) {
         <ImageSetting
           title={t.set.favicon}
           hint={t.set.favHint}
+          keep={keep}
+          kind="icon"
           value={v.favicon}
           onChange={(favicon) => setV({ ...v, favicon })}
           preview={
@@ -361,7 +371,7 @@ function Seo({ settings, pages }: { settings: SiteSettings; pages: PageLite[] })
   const siteTitle = settings.seo.title[nl];
   const gTitle = v.title[nl] || (page ? `${page.title[nl]} · ${settings.siteName[nl]}` : siteTitle);
   const gDesc = v.description[nl] || settings.seo.description[nl];
-  const url = `gdfourmedical.com${nl === "en" ? "/en" : ""}${page && page.slug !== "/" ? page.slug : ""}`;
+  const url = `${SITE_HOST}${nl === "en" ? "/en" : ""}${page && page.slug !== "/" ? page.slug : ""}`;
   const imgBg = v.image ? `center/cover no-repeat url(${v.image})` : "repeating-linear-gradient(135deg,var(--ph1) 0 8px,var(--ph2) 8px 16px)";
   const count = (s: string, max: number) => (
     <span className={`font-mono text-[12.5px] font-medium ${s.length > max ? "text-red" : "text-ink3"}`}>
@@ -476,99 +486,6 @@ function Seo({ settings, pages }: { settings: SiteSettings; pages: PageLite[] })
       />
       <MediaPicker open={picker} current={v.image} onPick={(image) => set({ image })} onClose={() => setPicker(false)} />
     </>
-  );
-}
-
-function Languages({ list: initial }: { list: SiteLanguage[] }) {
-  const { lang, t } = useAdmin();
-  const router = useRouter();
-  const toast = useToast();
-  const [list, setList] = useState(initial);
-  const [code, setCode] = useState("");
-  const [name, setName] = useState("");
-  const [err, setErr] = useState<string | null>(null);
-  const [, start] = useTransition();
-
-  const commit = (next: SiteLanguage[], msg = t.toast.setSaved) => {
-    setList(next);
-    start(async () => {
-      const r = await saveLanguages(next);
-      if (!r.ok) return toast("err", t.toast.fix);
-      toast("ok", msg);
-      router.refresh();
-    });
-  };
-  const add = (e: React.FormEvent) => {
-    e.preventDefault();
-    const c = code.trim().toLowerCase();
-    if (!/^[a-z]{2,3}$/.test(c)) return setErr(t.set.errCode);
-    if (list.some((l) => l.code === c)) return setErr(t.set.errLangDup);
-    if (!name.trim()) return setErr(t.set.errLangName);
-    setErr(null);
-    setCode("");
-    setName("");
-    commit([...list, { code: c, name: name.trim(), on: false }], t.toast.langAdded);
-  };
-
-  return (
-    <section className="card max-w-[760px] overflow-hidden [animation:a-up_.4s_both]">
-      <div className="flex flex-col gap-1 border-b border-line px-5 py-[18px]">
-        <strong className="text-base">{t.set.langTitle}</strong>
-        <span className="text-[13.5px] leading-normal text-ink2">{t.set.langSub}</span>
-      </div>
-      {list.map((l) => (
-        <div key={l.code} className="flex flex-wrap items-center gap-3 border-b border-line px-5 py-3 [animation:a-up_.3s_both]">
-          <span className="grid h-8 w-11 place-items-center rounded-md bg-soft font-mono text-[13px] font-semibold text-blue">{l.code}</span>
-          <strong className="flex-[1_1_120px] text-[15px]">
-            {l.name}
-            {!l.fixed && <span className="ml-2 text-xs font-normal text-ink3">{lang === "th" ? "(หน้าเว็บรองรับไทย/อังกฤษในเวอร์ชันนี้)" : "(the site supports Thai/English in this version)"}</span>}
-          </strong>
-          <button
-            type="button"
-            role="radio"
-            aria-checked={!!l.def}
-            onClick={() => !l.def && commit(list.map((x) => ({ ...x, def: x.code === l.code, on: x.code === l.code ? true : x.on })))}
-            className="inline-flex min-h-10 cursor-pointer items-center gap-2 border-0 bg-transparent px-2.5 text-sm text-ink"
-          >
-            <span className={`grid size-5 place-items-center rounded-full border-2 ${l.def ? "border-blue-solid" : "border-ink3"}`}>
-              <span className={`size-2.5 rounded-full bg-blue-solid transition-transform ${l.def ? "scale-100" : "scale-0"}`} />
-            </span>
-            {t.set.langDefault}
-          </button>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={l.on}
-            aria-label={`${t.set.langOn} ${l.name}`}
-            onClick={() => (l.def ? toast("err", t.toast.langDefOff) : commit(list.map((x) => (x.code === l.code ? { ...x, on: !x.on } : x))))}
-            className="inline-flex min-h-10 cursor-pointer items-center gap-2 border-0 bg-transparent px-1.5 text-sm text-ink2"
-          >
-            <span className={`relative h-6 w-11 rounded-xl transition-colors ${l.on ? "bg-blue-solid" : "bg-line"}`}>
-              <span className="absolute left-0.5 top-0.5 size-5 rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,.25)] transition-transform" style={{ transform: `translateX(${l.on ? 20 : 0}px)` }} />
-            </span>
-            {t.set.langOn}
-          </button>
-          {!l.fixed && (
-            <button type="button" onClick={() => commit(list.filter((x) => x.code !== l.code))} aria-label={t.c.del} className={btn.iconDanger}>
-              <AIcon name="trash" />
-            </button>
-          )}
-        </div>
-      ))}
-      <form onSubmit={add} className="flex flex-wrap items-start gap-2 px-5 py-4">
-        <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="zh" aria-label={t.set.langCode} className="field min-h-11 w-[90px] font-mono" />
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="中文" aria-label={t.set.langName} className="field min-h-11 flex-[1_1_160px] w-auto" />
-        <button type="submit" className={`${btn.primary} text-[14.5px]`}>
-          <AIcon name="plus" />
-          {t.set.addLang}
-        </button>
-        {err && (
-          <span className="basis-full">
-            <FieldError text={err} />
-          </span>
-        )}
-      </form>
-    </section>
   );
 }
 

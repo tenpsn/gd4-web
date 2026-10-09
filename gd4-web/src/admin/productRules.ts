@@ -19,6 +19,8 @@ export type ProductErrKey = "errName" | "errShort" | "errSkuReq" | "errSku" | "e
 export type ProductErrors = Partial<Record<"name_th" | "name_en" | "short_th" | "short_en" | "sku" | "cat", ProductErrKey>>;
 
 export const SHORT_MAX = 160;
+/** จำนวนรูปสูงสุดต่อสินค้า */
+export const IMG_MAX = 20;
 
 export function validateProduct(f: ProductInput, others: { id: string; sku: string }[]): ProductErrors {
   const e: ProductErrors = {};

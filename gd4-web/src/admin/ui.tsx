@@ -337,7 +337,7 @@ export function useUnsavedGuard(dirty: boolean) {
 /* ตัวช่วยอัปโหลดไฟล์ */
 export type Uploaded = { src: string; name: string; size: number };
 
-export async function uploadFile(file: File, kind: "image" | "pdf" | "font"): Promise<Uploaded | { error: string }> {
+export async function uploadFile(file: File, kind: "image" | "icon" | "pdf" | "font"): Promise<Uploaded | { error: string }> {
   const fd = new FormData();
   fd.append("file", file);
   fd.append("kind", kind);
@@ -348,6 +348,12 @@ export async function uploadFile(file: File, kind: "image" | "pdf" | "font"): Pr
     return { error: "network" };
   }
 }
+
+/** โดเมนของเว็บที่แสดงในตัวอย่างลิงก์ มาจาก NEXT_PUBLIC_SITE_URL ใน .env.local ใช้ค่าเริ่มต้นเดียวกับหน้าเว็บ */
+export const SITE_HOST = (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").replace(/^https?:\/\//, "").replace(/\/+$/, "");
+
+/** ลิงก์ไฟล์อัปโหลดทั้งหมดที่อยู่ในข้อมูล ใช้กันไม่ให้ลบรูปที่ฟอร์มยังใช้อยู่ */
+export const mediaSrcs = (data: unknown): string[] => JSON.stringify(data ?? null).match(/\/media\/[0-9a-f-]{36}\.[a-z0-9]+/g) ?? [];
 
 export const fmtSize = (b: number) => (b > 1048576 ? `${(b / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`);
 

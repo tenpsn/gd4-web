@@ -13,7 +13,7 @@ import { useAdmin } from "../context";
 import { relDate } from "../i18n";
 import { MediaPicker } from "../MediaPicker";
 import { CONTACT_FIELDS, newSection, RESERVED_SLUGS, SLUG_RE, TYPES } from "../sectionSchema";
-import { btn, Confirm, FieldError, label, Modal, PubBar, Req, Switch, useToast, useUnsavedGuard } from "../ui";
+import { btn, Confirm, FieldError, label, mediaSrcs, Modal, PubBar, Req, SITE_HOST, Switch, useToast, useUnsavedGuard } from "../ui";
 import { DesignPanel } from "./DesignPanel";
 import { getVal } from "./fields";
 import { GlobalEditor } from "./GlobalEditor";
@@ -479,7 +479,7 @@ export function Editor({ mode, initial, hasDraft, initialRev, categories, initia
                 <span className="grid text-ink3">
                   <AIcon name="globe" />
                 </span>
-                <span className="overflow-hidden text-ellipsis whitespace-nowrap">gdfourmedical.com{page.slug === "/" ? "" : page.slug}</span>
+                <span className="overflow-hidden text-ellipsis whitespace-nowrap">{SITE_HOST}{page.slug === "/" ? "" : page.slug}</span>
               </span>
               <span className={`rounded-full px-2.5 py-[3px] text-[12.5px] font-semibold ${page.inMenu ? "bg-green-soft text-green" : "bg-surface2 text-ink2"}`}>{page.inMenu ? t.content.inMenu : t.content.notInMenu}</span>
               {canEdit && (
@@ -519,7 +519,7 @@ export function Editor({ mode, initial, hasDraft, initialRev, categories, initia
       </div>
 
       {/* หน้าต่างป๊อปอัป */}
-      <MediaPicker open={!!media} current={media?.current ?? null} onPick={(src) => media?.apply(src)} onClose={() => setMedia(null)} />
+      <MediaPicker open={!!media} current={media?.current ?? null} keep={media ? mediaSrcs(w) : undefined} onPick={(src) => media?.apply(src)} onClose={() => setMedia(null)} />
 
       <Modal open={addSec} onClose={() => setAddSec(false)} width={760} title={t.content.pickType} sub={t.content.pickTypeSub}>
         <div className="flex flex-col gap-5 px-6 pb-6 pt-[18px]">
@@ -671,7 +671,7 @@ function PageModal({ mode, page, pages, onClose, onSave }: {
             <Req />
           </span>
           <span className={`flex items-center overflow-hidden rounded-lg border bg-field ${err.slug ? "border-red" : "border-line"}`}>
-            <span className="pl-3 font-mono text-sm font-medium text-ink3">gdfourmedical.com</span>
+            <span className="pl-3 font-mono text-sm font-medium text-ink3">{SITE_HOST}</span>
             <input
               value={slug}
               disabled={system}

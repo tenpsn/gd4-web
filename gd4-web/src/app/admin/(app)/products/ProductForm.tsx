@@ -4,10 +4,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { AIcon } from "@/admin/AIcon";
+import { MediaPicker } from "@/admin/MediaPicker";
 import { useAdmin } from "@/admin/context";
 import { fmtDate } from "@/admin/i18n";
-import { SHORT_MAX, validateProduct, type ProductErrors, type ProductInput } from "@/admin/productRules";
-import { btn, Confirm, FieldError, fmtSize, label, Modal, Pill, PubBar, RadioCard, Req, uploadFile, useToast, useUnsavedGuard } from "@/admin/ui";
+import { IMG_MAX, SHORT_MAX, validateProduct, type ProductErrors, type ProductInput } from "@/admin/productRules";
+import { btn, Confirm, FieldError, fmtSize, label, mediaSrcs, Modal, Pill, PubBar, RadioCard, Req, uploadFile, useToast, useUnsavedGuard } from "@/admin/ui";
 import type { Category, LText, Locale, ProductImage } from "@/types/site";
 import { deleteProducts, saveProduct } from "../../actions/products";
 import { CategoriesModal } from "./CategoriesModal";
@@ -34,6 +35,8 @@ export function ProductForm({ initial, categories, others, meta, canEdit, canPub
   const [tab, setTab] = useState<Locale>("th");
   const [pending, start] = useTransition();
   const [dz, setDz] = useState(false);
+  const [picker, setPicker] = useState(false);
+  const [pdfPicker, setPdfPicker] = useState(false);
   const [preview, setPreview] = useState(false);
   const [catsOpen, setCatsOpen] = useState(false);
   const [del, setDel] = useState(false);
@@ -92,21 +95,37 @@ export function ProductForm({ initial, categories, others, meta, canEdit, canPub
   };
 
   /* รูปภาพ */
+  const imgMax = t.form.imgMax.replace("{max}", String(IMG_MAX));
+  /** ต่อท้ายรูปใหม่ ข้ามรูปที่มีในสินค้านี้แล้วและรูปที่เกินจำนวนสูงสุด */
+  const appendImages = (add: ProductImage[]) => {
+    const have = new Set(f.images.map((i) => i.src));
+    const fresh = add.filter((im) => !have.has(im.src) && have.add(im.src));
+    const keep = fresh.slice(0, Math.max(0, IMG_MAX - f.images.length));
+    if (fresh.length < add.length) toast("err", t.form.imgDup);
+    if (keep.length < fresh.length) toast("err", imgMax);
+    if (!keep.length) return;
+    set((x) => ({ ...x, images: [...x.images, ...keep].slice(0, IMG_MAX), mainId: x.mainId ?? keep[0].id }));
+    toast("ok", t.toast.imgAdded);
+  };
   const addImages = async (files: FileList | File[]) => {
-    const list = Array.from(files).filter((x) => /^image\/(jpeg|png|webp)$/.test(x.type) && x.size <= 5 * 1024 * 1024);
-    if (!list.length || list.length !== Array.from(files).length) toast("err", t.toast.imgOnly);
+    if (f.images.length >= IMG_MAX) return toast("err", imgMax);
+    const all = Array.from(files);
+    const list = all.filter((x) => /^image\/(jpeg|png|webp)$/.test(x.type) && x.size <= 5 * 1024 * 1024);
+    if (!list.length || list.length !== all.length) toast("err", t.toast.imgOnly);
     if (!list.length) return;
+    // อัปโหลดเฉพาะเท่าที่ยังใส่ได้ ไฟล์ที่เกินจะไม่ถูกส่งขึ้นคลัง
+    const room = IMG_MAX - f.images.length;
+    if (list.length > room) toast("err", imgMax);
     const done: ProductImage[] = [];
-    for (const file of list) {
+    for (const file of list.slice(0, room)) {
       const r = await uploadFile(file, "image");
       if ("src" in r) done.push({ id: uid("im"), src: r.src, label: { th: r.name, en: r.name } });
       else toast("err", t.toast.imgOnly);
     }
-    if (done.length) {
-      set((x) => ({ ...x, images: [...x.images, ...done], mainId: x.mainId ?? done[0].id }));
-      toast("ok", t.toast.imgAdded);
-    }
+    if (done.length) appendImages(done);
   };
+  /** เพิ่มรูปที่เลือกจากคลังสื่อ */
+  const pickImage = (src: string, name: string) => appendImages([{ id: uid("im"), src, label: { th: name, en: name } }]);
   const moveImg = (from: number, to: number) =>
     set((x) => {
       if (to < 0 || to >= x.images.length) return x;
@@ -296,7 +315,7 @@ export function ProductForm({ initial, categories, others, meta, canEdit, canPub
             <div className="flex items-center justify-between gap-3">
               <h2 className={h2}>{t.form.images}</h2>
               <span className="text-[13.5px] text-ink3">
-                {f.images.length} {lang === "th" ? "รูป" : "images"}
+                {f.images.length}/{IMG_MAX} {lang === "th" ? "รูป" : "images"}
               </span>
             </div>
             <div
@@ -323,6 +342,10 @@ export function ProductForm({ initial, categories, others, meta, canEdit, canPub
               <span className="text-[13.5px] text-ink2">{t.form.imgHint}</span>
             </div>
             <input ref={imgInput} type="file" accept="image/jpeg,image/png,image/webp" multiple hidden onChange={(e) => (e.target.files && addImages(e.target.files), (e.target.value = ""))} />
+            <button type="button" onClick={() => setPicker(true)} className={`${btn.outline} min-h-10 self-start px-3.5 text-sm`}>
+              <AIcon name="image" />
+              {t.content.chooseMedia}
+            </button>
             {f.images.length > 0 && (
               <>
                 <span className="text-[13.5px] text-ink2">{t.form.imgOrder}</span>
@@ -443,6 +466,10 @@ export function ProductForm({ initial, categories, others, meta, canEdit, canPub
                   </a>
                   <span className="text-[13px] text-ink2">PDF · {fmtSize(f.pdf.size)}</span>
                 </span>
+                <button type="button" onClick={() => setPdfPicker(true)} className={`${btn.outline} min-h-10 px-3.5 text-sm`}>
+                  <AIcon name="file" />
+                  {t.content.chooseMedia}
+                </button>
                 <button type="button" onClick={() => pdfInput.current?.click()} className={`${btn.outline} min-h-10 px-3.5 text-sm`}>
                   {t.form.replace}
                 </button>
@@ -454,6 +481,12 @@ export function ProductForm({ initial, categories, others, meta, canEdit, canPub
               <button type="button" onClick={() => pdfInput.current?.click()} className="flex min-h-16 cursor-pointer items-center justify-center gap-2.5 rounded-[10px] border-2 border-dashed border-line bg-surface2 text-[14.5px] text-ink2 hover:border-blue-solid hover:text-blue">
                 <AIcon name="upload" />
                 {t.form.pdfHint}
+              </button>
+            )}
+            {!f.pdf && (
+              <button type="button" onClick={() => setPdfPicker(true)} className={`${btn.outline} min-h-10 self-start px-3.5 text-sm`}>
+                <AIcon name="file" />
+                {t.content.chooseMedia}
               </button>
             )}
             <input ref={pdfInput} type="file" accept="application/pdf,.pdf" hidden onChange={(e) => (addPdf(e.target.files?.[0]), (e.target.value = ""))} />
@@ -569,6 +602,8 @@ export function ProductForm({ initial, categories, others, meta, canEdit, canPub
         </div>
       </Modal>
 
+      <MediaPicker open={pdfPicker} kind="pdf" current={f.pdf?.src ?? null} onPick={(src, name, size) => (set((x) => ({ ...x, pdf: { src, name, size } })), toast("ok", t.toast.pdfAdded))} onClose={() => setPdfPicker(false)} />
+      <MediaPicker open={picker} current={null} keep={mediaSrcs(f.images)} onPick={pickImage} onClose={() => setPicker(false)} />
       {catsOpen && <CategoriesModal categories={categories} counts={{}} onClose={() => setCatsOpen(false)} />}
 
       <Confirm

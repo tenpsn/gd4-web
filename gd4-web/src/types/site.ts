@@ -194,8 +194,6 @@ export type MenuItem = {
 /** custom คือช่องทางอื่นที่แอดมินตั้งชื่อและอัปโหลดโลโก้เอง */
 export type SocialPlatform = "facebook" | "line" | "youtube" | "instagram" | "linkedin" | "tiktok" | "x" | "custom";
 
-export type SiteLanguage = { code: string; name: string; on: boolean; def?: boolean; fixed?: boolean };
-
 export type SiteSettings = {
   /** ชื่อแบรนด์ที่แสดงบนหัวเว็บ ท้ายเว็บ และชื่อหน้า */
   siteName: LText;
@@ -203,7 +201,6 @@ export type SiteSettings = {
   logoDark: Img;
   favicon: Img;
   seo: { title: LText; description: LText; image?: Img };
-  languages: SiteLanguage[];
   contact: {
     address: LText;
     phone: string;

@@ -118,6 +118,8 @@ function migrate(db: DB): DB {
   // เลิกใช้ระบบสำรองข้อมูลแล้ว จึงตัดข้อมูลที่เหลือของระบบนั้นออก
   delete (db as { backups?: unknown }).backups;
   delete (db.settings as { autoBackup?: boolean }).autoBackup;
+  // เลิกใช้แท็บตั้งค่าภาษาแล้ว หน้าเว็บกำหนดภาษาไว้ในโค้ด
+  delete (db.settings as { languages?: unknown }).languages;
   db.media ??= [];
   // เพิ่มสิทธิ์ของประวัติการแก้ไข
   for (const r of Object.keys(DEFAULT_PERMS) as (keyof typeof DEFAULT_PERMS)[]) {

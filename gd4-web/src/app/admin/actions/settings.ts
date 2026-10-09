@@ -3,13 +3,16 @@
 import { revalidatePath } from "next/cache";
 import { logActivity } from "@/server/activity";
 import { assertCan, getCurrentUser, renewSession } from "@/server/auth";
+import { mutateAndPrune } from "@/server/cleanup";
 import { hashPassword, verifyPassword } from "@/server/password";
 import { mutate, readDb } from "@/server/store";
-import type { Img, LText, SiteLanguage } from "@/types/site";
+import type { Img, LText } from "@/types/site";
 
 const str = (v: unknown, max: number) => String(v ?? "").slice(0, max);
 const lt = (v: Partial<LText> | undefined, max: number): LText => ({ th: str(v?.th, max).trim(), en: str(v?.en, max).trim() });
 const img = (s: unknown): Img => (typeof s === "string" && /^\/media\/[0-9a-f-]{36}\.(jpg|png|webp)$/.test(s) ? s : null);
+/** favicon รับไฟล์ ICO ได้ด้วย */
+const icon = (s: unknown): Img => (typeof s === "string" && /^\/media\/[0-9a-f-]{36}\.(jpg|png|webp|ico)$/.test(s) ? s : null);
 const refresh = () => revalidatePath("/", "layout");
 const SET = { th: "แก้ตั้งค่า", en: "updated settings" };
 
@@ -17,8 +20,9 @@ export async function saveGeneral(input: { siteName: LText; logo: Img; logoDark:
   const me = await assertCan("settings", "edit");
   const siteName = lt(input.siteName, 80);
   if (!siteName.th || !siteName.en) return { ok: false as const, error: "errName" as const };
-  await mutate((db) => {
-    Object.assign(db.settings, { siteName, logo: img(input.logo), logoDark: img(input.logoDark), favicon: img(input.favicon) });
+  // รูปเดิมที่ไม่อยู่ในคลังและไม่มีที่ไหนใช้แล้วจะถูกลบ รูปในคลังยังอยู่
+  await mutateAndPrune((db) => {
+    Object.assign(db.settings, { siteName, logo: img(input.logo), logoDark: img(input.logoDark), favicon: icon(input.favicon) });
     logActivity(db, me.id, SET, { th: "ทั่วไป", en: "general" });
   });
   refresh();
@@ -43,28 +47,6 @@ export async function saveSeo(target: string, input: { title: LText; description
   });
   refresh();
   return { ok };
-}
-
-export async function saveLanguages(list: SiteLanguage[]) {
-  const me = await assertCan("settings", "edit");
-  const clean = (Array.isArray(list) ? list : []).slice(0, 12).map((l) => ({
-    code: str(l.code, 3).toLowerCase(),
-    name: str(l.name, 40).trim(),
-    on: !!l.on,
-    def: !!l.def,
-    fixed: l.code === "th" || l.code === "en",
-  }));
-  if (clean.some((l) => !/^[a-z]{2,3}$/.test(l.code) || !l.name)) return { ok: false as const };
-  // ต้องมีภาษาหลักเพียงภาษาเดียว และต้องเปิดใช้งานอยู่
-  const def = clean.find((l) => l.def && l.on) ?? clean.find((l) => l.code === "th")!;
-  clean.forEach((l) => (l.def = l === def));
-  def.on = true;
-  await mutate((db) => {
-    db.settings.languages = clean;
-    logActivity(db, me.id, SET, { th: "ภาษา", en: "languages" });
-  });
-  refresh();
-  return { ok: true as const };
 }
 
 /* ความปลอดภัยของบัญชี ผู้ใช้ทุกคนจัดการบัญชีของตัวเองได้ */
